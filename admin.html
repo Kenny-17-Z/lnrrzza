@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家属后台 - 数据分析与练习设置</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; color: #333; padding: 10px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  
+  /* 顶部导航（仅刷新） */
+  .header { display: flex; justify-content: flex-end; align-items: center; padding: 10px 5px; margin-bottom: 10px; }
+  .icon-btn { cursor: pointer; font-size: 24px; padding: 5px; border-radius: 50%; transition: 0.2s; }
+  .icon-btn:hover { background: #eee; }
+  
+  /* 标签页 */
+  .tabs { display: flex; border-bottom: 2px solid #4CAF50; margin-bottom: 15px; }
+  .tab { padding: 10px 20px; cursor: pointer; font-size: 15px; color: #666; }
+  .tab.active { color: #4CAF50; font-weight: bold; border-bottom: 2px solid #4CAF50; margin-bottom: -2px; }
+  .tab-content { display: none; } .tab-content.active { display: block; }
+  
+  /* 卡片通用 */
+  .card { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+  .card h2 { font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  
+  /* 日历 */
+  .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-day { min-height: 55px; padding: 8px; border-radius: 8px; background: #f9f9f9; text-align: center; font-size: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .cal-day.empty { background: transparent; }
+  .cal-day.gray { color: #999; }
+  .cal-day.green { background: #e8f5e9; color: #4CAF50; font-weight: bold; }
+  .cal-day.yellow { background: #fff8e1; color: #FFC107; }
+  .cal-day.red { background: #ffebee; color: #f44336; }
+  .day-num { font-size: 16px; }
+  .day-rate { font-size: 13px; margin-top: 2px; }
+  .week-labels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font-size: 13px; color: #888; margin-bottom: 5px; }
+  
+  /* 趋势图 */
+  canvas { width: 100%; height: 200px; }
+  
+  /* 人物正确率（横向卡片） */
+  .person-stats-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+  .stat-card { min-width: 90px; background: #fafafa; border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .stat-card h3 { font-size: 15px; margin-bottom: 5px; }
+  .stat-card .rate { font-size: 24px; color: #4CAF50; font-weight: bold; }
+  .stat-card small { color: #999; font-size: 12px; }
+  
+  /* 练习设置 */
+  .person-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+  .person-item:last-child { border-bottom: none; }
+  .person-avatar { width: 45px; height: 45px; border-radius: 50%; background: #ddd; margin-right: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; }
+  .person-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .person-info { flex: 1; }
+  .person-name { font-size: 16px; font-weight: 500; }
+  .person-count { font-size: 12px; color: #888; margin-top: 2px; }
+  .add-btn { display: block; width: 100%; padding: 12px; background: #4CAF50; color: #fff; text-align: center; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 15px; border: none; }
+  
+  /* 弹窗 */
+  .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; overflow-y: auto; }
+  .modal.show { display: block; }
+  .modal-content { background: #fff; max-width: 600px; margin: 30px auto; border-radius: 10px; padding: 20px; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .photo-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #eee; }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+  .cover-badge { position: absolute; top: 5px; left: 5px; background: rgba(76,175,80,0.9); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+  .photo-actions { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 80%; text-align: center; }
+  
+  /* GitHub配置 */
+  .token-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .token-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .eye-btn { cursor: pointer; font-size: 18px; padding: 5px; user-select: none; }
+  .hint { font-size: 12px; color: #888; margin-top: 5px; }
+  
+  button.primary { background: #4CAF50; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  button { cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 顶部仅保留刷新 -->
+  <div class="header">
+    <span class="icon-btn" onclick="location.reload()" title="刷新">🔄</span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('data')">数据分析</div>
+    <div class="tab" onclick="switchTab('manage')">练习设置</div>
+  </div>
+
+  <!-- 数据分析 -->
+  <div id="dataTab" class="tab-content active">
+    <div class="card">
+      <div class="cal-header">
+        <strong id="calTitle">本周（周日-周六）</strong>
+        <div>
+          <button id="prevBtn" style="display:none" onclick="prevMonth()">‹</button>
+          <button id="nextBtn" style="display:none" onclick="nextMonth()">›</button>
+          <button id="calToggleBtn" onclick="toggleCal()">展开整月</button>
+        </div>
+      </div>
+      <div class="week-labels"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
+      <div class="cal-days" id="calDays"></div>
+    </div>
+
+    <div class="card">
+      <h2>正确率趋势</h2>
+      <div style="margin-bottom:8px;">
+        <label>近 <select id="trendRange"><option value="7">7天</option><option value="14">14天</option><option value="30">30天</option></select></label>
+      </div>
+      <canvas id="trendCanvas"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>进步对比</h2>
+      <div style="margin-bottom:8px;">
+        <select id="compareMode" onchange="toggleCompareDate()">
+          <option value="prev">和昨天比</option>
+          <option value="specific">指定日期</option>
+        </select>
+        <input type="date" id="compareDate" style="display:none;margin-left:8px;">
+      </div>
+      <div id="progress"></div>
+    </div>
+
+    <div class="card">
+      <h2>👤 人物正确率</h2>
+      <div class="person-stats-row" id="personStats"></div>
+    </div>
+
+    <div class="card">
+      <h2>易混淆</h2>
+      <div id="confusion"></div>
+    </div>
+
+    <div class="card">
+      <h2>历史记录 <span id="recordHint">（当前显示近7天）</span></h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead><tr style="border-bottom:1px solid #eee;"><th style="text-align:left;padding:8px;">日期</th><th>正确</th><th>总数</th><th>正确率</th></tr></thead>
+        <tbody id="records"></tbody>
+      </table>
+      <button id="toggleBtn" onclick="toggleRecords()" style="margin-top:10px;padding:8px 12px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;">展开全部</button>
+    </div>
+  </div>
+
+  <!-- 练习设置 -->
+  <div id="manageTab" class="tab-content">
+    <div class="card">
+      <h2>GitHub 配置</h2>
+      <div class="token-row">
+        <input type="password" id="tokenInput" placeholder="GitHub Token">
+        <span class="eye-btn" onclick="toggleEye()">👁️</span>
+        <input type="text" id="branchInput" placeholder="分支" style="width:100px;">
+        <button class="primary" onclick="saveToken()">保存</button>
+      </div>
+      <div class="hint" id="tokenHint">未配置（显示模拟数据，配置后同步真实人物）</div>
+    </div>
+
+    <div class="card">
+      <h2>人物管理</h2>
+      <div id="personList"></div>
+      <button class="add-btn" onclick="showAddPerson()">+ 新建人物</button>
+    </div>
+  </div>
+</div>
+
+<!-- 人物详情弹窗 -->
+<div class="modal" id="personModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">照片</h3>
+      <span onclick="closeModal('personModal')" style="cursor:pointer;font-size:20px;">✕</span>
+    </div>
+    <div class="photo-grid" id="photoGrid"></div>
+    <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="showAddPhoto()">添加照片</button>
+      <button onclick="showRename()">改名</button>
+      <button onclick="confirmDelete()" style="color:#f44336;">删除人物</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加照片弹窗 -->
+<div class="modal" id="addPhotoModal">
+  <div class="modal-content">
+    <div class="modal-header"><h3>添加照片</h3><span onclick="closeModal('addPhotoModal')">✕</span></div>
+    <input type="file" id="addPhotoInput" multiple accept="image/*">
+    <button class="primary" style="margin-top:10px;width:100%;padding:10px;" onclick="uploadPhotos()">上传</button>
+  </div>
+</div>
+
+<!-- 新建人物弹窗 -->
+<div class="modal" id="addPersonModal">
+  <div class="modal-content">
+    <div class="modal-header"><h3>新建人物</h3><span onclick="closeModal('addPersonModal')">✕</span></div>
+    <div style="margin-bottom:10px;">
+      <label>名字</label>
+      <input type="text" id="newPersonName" style="width:100%;padding:10px;margin-top:5px;border:1px solid #ddd;border-radius:6px;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label>照片（可多选）</label>
+      <input type="file" id="newPersonPhotos" multiple accept="image/*" style="margin-top:5px;">
+    </div>
+    <button class="primary" style="width:100%;padding:12px;border-radius:8px;border:none;font-size:16px;" onclick="addPerson()">创建</button>
+  </div>
+</div>
+
+<script>
+// ==================== 标签页 ====================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t,i) {
+    t.classList.toggle('active', (i===0 && name==='data') || (i===1 && name==='manage'));
+  });
+  document.getElementById('dataTab').classList.toggle('active', name==='data');
+  document.getElementById('manageTab').classList.toggle('active', name==='manage');
+}
+
+// ==================== Token & 配置 ====================
+var TOKEN = localStorage.getItem('gh_token') || '';
+var BRANCH = localStorage.getItem('gh_branch') || 'main';
+var family = [{name:"红"},{name:"慧贤"},{name:"泉"},{name:"欣"}];
+var currentPersonIdx = 0;
+
+function toggleEye() {
+  var inp = document.getElementById('tokenInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function ghPut(path, content, msg) {
+  // 模拟API，实际需接入GitHub
+  return Promise.resolve();
+}
+async function loadFamily() {
+  // 模拟加载，实际需从GitHub读取
+  renderList(); renderPersonStats();
+}
+
+// ==================== 模拟数据 ====================
+var today = new Date();
+var pad = function(n){return String(n).padStart(2,'0');};
+var getKey = function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+var allData = [];
+var rates = [85, 92, 78, 88, 95, 82, 90];
+for(var i=6; i>=0; i--) {
+  var d = new Date(today); d.setDate(today.getDate() - i);
+  var total = 20 + Math.floor(Math.random()*10);
+  var correct = Math.round(total * (rates[6-i]/100));
+  allData.push({ date: getKey(d), correct: correct, total: total, results: [] });
+}
+
+// ==================== 日历 ====================
+var calExpanded = false, calYear = today.getFullYear(), calMonth = today.getMonth();
+function prevMonth(){calMonth--; if(calMonth<0){calMonth=11; calYear--;} renderCal();}
+function nextMonth(){calMonth++; if(calMonth>11){calMonth=0; calYear++;} renderCal();}
+function toggleCal() {
+  calExpanded = !calExpanded;
+  document.getElementById('calToggleBtn').innerText = calExpanded ? '收起' : '展开整月';
+  document.getElementById('prevBtn').style.display = calExpanded ? 'inline-block' : 'none';
+  document.getElementById('nextBtn').style.display = calExpanded ? 'inline-block' : 'none';
+  renderCal();
+}
+function renderCal() {
+  var currentDate = today.getDate(), currentDay = today.getDay();
+  if(!calExpanded) {
+    document.getElementById('calTitle').innerText = '本周（周日-周六）';
+    var weekStart = new Date(today); weekStart.setDate(currentDate - currentDay);
+    var html = '';
+    for(var i=0; i<7; i++) {
+      var d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+      var key = getKey(d), recs = allData.filter(function(r){return r.date===key;});
+      if(recs.length>0) {
+        var total = recs.reduce(function(a,b){return a+b.total;},0), correct = recs.reduce(function(a,b){return a+b.correct;},0);
+        var rate = Math.round(correct/total*100), cls = rate>=80?'green':rate>=50?'yellow':'red';
+        html += '<div class="cal-day '+cls+'"><span class="day-num">'+d.getDate()+'</span><span class="day-rate">'+rate+'%</span></div>';
+      } else { html += '<div class="cal-day gray"><span class="day-num">'+d.getDate()+'</span></div>'; }
+    }
+    document.getElementById('calDays').innerHTML = html;
+  } else {
+    document.getElementById('calTitle').innerText = calYear+'年'+(calMonth+1)+'月（周日-周六）';
+    var firstDay = new Date(calYear, calMonth, 1).getDay(), daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+    var html = '';
+    for(var i=0; i<firstDay; i++) html += '<div class="cal-day empty"></div>';
+    for(var d=1; d<=daysInMonth; d++) {
+      var key = calYear+'-'+pad(calMonth+1)+'-'+pad(d), recs = allData.filter(function(r){return r.date===key;});
+      if(recs.length>0) {
+        var total = recs.reduce(function(a,b){return a+b.total;},0), correct = recs.reduce(function(a,b){return a+b.correct;},0);
+        var rate = Math.round(correct/total*100), cls = rate>=80?'green':rate>=50?'yellow':'red';
+        html += '<div class="cal-day '+cls+'"><span class="day-num">'+d+'</span><span class="day-rate">'+rate+'%</span></div>';
+      } else { html += '<div class="cal-day gray"><span class="day-num">'+d+'</span></div>'; }
+    }
+    document.getElementById('calDays').innerHTML = html;
+  }
+}
+
+// ==================== 趋势图 ====================
+function renderTrend() {
+  var range = parseInt(document.getElementById('trendRange').value);
+  var canvas = document.getElementById('trendCanvas'), ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 300; canvas.height = 200;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  var data = allData.slice(-range);
+  if(data.length<1) return;
+  var p2=30, maxRate=100, stepX = data.length>1?(canvas.width-p2 * 2)/(data.length-1):0;
+  var points = data.map(function(d,i){
+    var rate = d.total?d.correct/d.total*100:0;
+    return {x:p2+i*stepX, y:canvas.height-p2-(rate/maxRate)*(canvas.height-p2 * 2), rate:rate, date:d.date};
+  });
+  ctx.beginPath();
+  points.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
+  ctx.strokeStyle="#4CAF50"; ctx.lineWidth=2; ctx.stroke();
+  points.forEach(function(p){
+    ctx.fillStyle = p.rate<50?"#f44336":(p.rate<80?"#FFC107":"#4CAF50");
+    ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#666"; ctx.font="10px sans-serif"; ctx.fillText(p.rate.toFixed(0)+"%", p.x-10, p.y-8);
+  });
+}
+document.getElementById('trendRange').onchange = renderTrend;
+
+// ==================== 进步对比（和昨天比） ====================
+function toggleCompareDate() {
+  var mode = document.getElementById('compareMode').value;
+  document.getElementById('compareDate').style.display = mode==='specific'?'inline-block':'none';
+  renderProgress();
+}
+function renderProgress() {
+  if(allData.length<2) { document.getElementById('progress').innerHTML='数据不足'; return; }
+  allData.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  var mode = document.getElementById('compareMode').value;
+  var current = allData[allData.length-1], currRate = current.correct/current.total*100;
+  var target, targetRate, desc;
+  if(mode==='specific') {
+    var selDate = document.getElementById('compareDate').value;
+    target = allData.find(function(d){return d.date===selDate;});
+    if(!target) { document.getElementById('progress').innerHTML='所选日期无记录'; return; }
+    targetRate = target.correct/target.total*100; desc = '指定日期';
+  } else {
+    target = allData[allData.length-2]; targetRate = target.correct/target.total*100; desc = '和昨天比';
+  }
+  var diff = currRate - targetRate;
+  document.getElementById('progress').innerHTML =
+    '<p>当前（'+current.date+'）正确率：<b>'+currRate.toFixed(1)+'%</b></p>'+
+    '<p>对比（'+desc+'，'+target.date+'）正确率：<b>'+targetRate.toFixed(1)+'%</b></p>'+
+    '<p>变化：<b style="color:'+(diff>=0?'green':'red')+'">'+(diff>=0?'+':'')+diff.toFixed(1)+'%</b></p>';
+}
+
+// ==================== 人物正确率（新UI，与练习设置同步） ====================
+function renderPersonStats() {
+  var stats = {};
+  family.forEach(function(f){stats[f.name]={correct:0, total:0};});
+  allData.forEach(function(s){
+    if(s.results) s.results.forEach(function(r){
+      if(stats[r.question]){stats[r.question].total++; if(r.correct)stats[r.question].correct++;}
+    });
+  });
+  var html = '';
+  Object.entries(stats).forEach(function(entry){
+    var n=entry[0], s=entry[1], rate=s.total?Math.round(s.correct/s.total*100):0;
+    html += '<div class="stat-card"><h3>'+n+'</h3><div class="rate">'+rate+'%</div><small>'+s.correct+'/'+s.total+'</small></div>';
+  });
+  document.getElementById('personStats').innerHTML = html || '暂无数据（请先在练习设置中新建人物）';
+}
+
+// ==================== 易混淆 ====================
+function renderConfusion() {
+  var wrong = {};
+  allData.forEach(function(s){
+    if(s.results) s.results.forEach(function(r){
+      if(!r.correct){var key=r.question+' → '+r.answer; wrong[key]=(wrong[key]||0)+1;}
+    });
+  });
+  var html = '';
+  Object.entries(wrong).sort(function(a,b){return b[1]-a[1];}).slice(0,5).forEach(function(entry){
+    html += '<div style="margin:5px 0;padding:8px;background:#fff3f3;border-radius:5px;"><b>'+entry[0]+'</b><br>错 '+entry[1]+' 次</div>';
+  });
+  document.getElementById('confusion').innerHTML = html || '暂无错误记录，表现很好！';
+}
+
+// ==================== 历史记录 ====================
+var showAll = false;
+function renderRecords() {
+  var sorted = allData.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var display = showAll?sorted:sorted.slice(0,7);
+  var html = '';
+  display.forEach(function(r){
+    var rate = r.total?Math.round(r.correct/r.total*100):0;
+    html += '<tr><td style="padding:8px;">'+r.date+'</td><td style="text-align:center;">'+r.correct+'</td><td style="text-align:center;">'+r.total+'</td><td style="text-align:center;color:'+(rate<50?'red':rate<80?'#FFC107':'green')+'">'+rate+'%</td></tr>';
+  });
+  document.getElementById('records').innerHTML = html || '<tr><td colspan="4">暂无记录</td></tr>';
+}
+function toggleRecords() {
+  showAll = !showAll;
+  document.getElementById('toggleBtn').innerText = showAll?'收起':'展开全部';
+  document.getElementById('recordHint').innerText = showAll?'（显示全部记录）':'（当前显示近7天）';
+  renderRecords();
+}
+
+// ==================== 练习设置（人物列表与详情） ====================
+function renderList() {
+  var html = '';
+  family.forEach(function(f, idx){
+    var avatar = f.photos && f.photos[0] ? '<img src="'+f.photos[0]+'">' : f.name[0];
+    html += '<div class="person-item" onclick="openPerson('+idx+')"><div class="person-avatar">'+avatar+'</div><div class="person-info"><div class="person-name">'+f.name+'</div><div class="person-count">'+(f.photos?f.photos.length:0)+' 张照片</div></div></div>';
+  });
+  document.getElementById('personList').innerHTML = html;
+}
+function openPerson(idx) {
+  currentPersonIdx = idx; var f = family[idx];
+  document.getElementById('modalTitle').innerText = f.name + ' 的照片';
+  var photos = f.photos && f.photos.length ? f.photos : ['https://picsum.photos/seed/a/200/200','https://picsum.photos/seed/b/200/200'];
+  var html = '';
+  photos.forEach(function(src, i){
+    html += '<div class="photo-item"><img src="'+src+'">'+(i===(f.cover||0)?'<div class="cover-badge">封面</div>':'')+
+      '<div class="photo-actions" onclick="event.stopPropagation();setCover('+i+')">设封面</div>'+
+      '<div class="photo-actions" style="bottom:25px;background:rgba(244,67,54,0.7);" onclick="event.stopPropagation();delPhoto('+i+')">删除</div></div>';
+  });
+  document.getElementById('photoGrid').innerHTML = html;
+  document.getElementById('personModal').classList.add('show');
+}
+function setCover(i) { if(family[currentPersonIdx]){family[currentPersonIdx].cover=i; saveConfig(); openPerson(currentPersonIdx);} }
+function delPhoto(i) { if(!confirm('删除这张照片？')) return; family[currentPersonIdx].photos.splice(i,1); if(family[currentPersonIdx].cover>=family[currentPersonIdx].photos.length) family[currentPersonIdx].cover=0; saveConfig(); openPerson(currentPersonIdx); }
+function showAddPhoto() { document.getElementById('addPhotoModal').classList.add('show'); }
+function showRename() { var n=prompt('新名字：',family[currentPersonIdx].name); if(n&&n.trim()){family[currentPersonIdx].name=n.trim();saveConfig();closeModal('personModal');renderPersonStats();renderList();} }
+function confirmDelete() { if(confirm('确认删除？')){family.splice(currentPersonIdx,1);saveConfig();closeModal('personModal');renderPersonStats();renderList();} }
+function showAddPerson() { document.getElementById('addPersonModal').classList.add('show'); }
+
+async function addPerson() {
+  var name=document.getElementById('newPersonName').value.trim(), files=document.getElementById('newPersonPhotos').files;
+  if(!name){alert('请输入名字');return;} if(!files.length){alert('请选照片');return;}
+  var photos=[];
+  for(var f of files){var path='photos/'+name+'/'+Date.now()+'_'+f.name.replace(/\s/g,"_"); photos.push(path);}
+  family.push({name:name,folder:'photos/'+name,photos:photos,cover:0}); await saveConfig();
+  document.getElementById('newPersonName').value=''; document.getElementById('newPersonPhotos').value=''; closeModal('addPersonModal'); renderPersonStats(); renderList();
+}
+async function uploadPhotos() {
+  var files=document.getElementById('addPhotoInput').files; if(!files.length){alert('请选照片');return;}
+  var p=family[currentPersonIdx];
+  for(var f of files){var path=p.folder+'/'+Date.now()+'_'+f.name.replace(/\s/g,"_"); p.photos.push(path);}
+  await saveConfig(); document.getElementById('addPhotoInput').value=''; closeModal('addPhotoModal'); openPerson(currentPersonIdx);
+}
+function saveToken() {
+  TOKEN = document.getElementById('tokenInput').value.trim(); BRANCH = document.getElementById('branchInput').value.trim()||'main';
+  localStorage.setItem('gh_token', TOKEN); localStorage.setItem('gh_branch', BRANCH);
+  document.getElementById('tokenHint').innerText = TOKEN?'已配置（加载中...）':'未配置';
+  if(TOKEN) loadFamily(); else { family=[{name:"红"},{name:"慧贤"},{name:"泉"},{name:"欣"}]; renderList(); renderPersonStats(); }
+}
+async function saveConfig(){ if(TOKEN) await ghPut('/config.json', JSON.stringify({family},null,2),'update config'); renderList(); renderPersonStats(); }
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+// ==================== 初始化 ====================
+renderCal(); renderTrend(); renderProgress(); renderPersonStats(); renderConfusion(); renderRecords(); renderList();
+document.getElementById('tokenInput').value = TOKEN; document.getElementById('branchInput').value = BRANCH;
+document.getElementById('tokenHint').innerText = TOKEN ? '已配置（加载中...）' : '未配置（显示模拟数据，配置后同步真实人物）';
+if(TOKEN) loadFamily();
+</script>
+</body>
+</html>
