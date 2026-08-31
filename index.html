@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>认人练习</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+  body{font-family:sans-serif;text-align:center;background:#fff;margin:0;padding:20px;}
+  h1{font-size:32px;margin:40px 0;}
+  button{font-size:28px;padding:15px 40px;margin:10px;border-radius:12px;border:none;background:#4CAF50;color:#fff;cursor:pointer;}
+  img#q{width:240px;height:240px;object-fit:cover;margin:20px auto;display:block;border:4px solid #f44336;border-radius:12px;}
+  .options{display:flex;flex-wrap:wrap;justify-content:center;}
+  .opt{font-size:36px;padding:20px 30px;margin:10px;background:#2196F3;color:#fff;border-radius:12px;border:none;cursor:pointer;}
+  .opt:disabled{opacity:0.6;cursor:not-allowed;}
+  #result{font-size:32px;margin-top:20px;min-height:40px;}
+  #progress{font-size:20px;color:#666;margin-bottom:20px;}
+  .summary{font-size:24px;margin:20px;}
+  .celebrate{color:#E91E63;font-weight:bold;font-size:36px;margin:20px;}
+  .loading{font-size:24px;color:#666;margin-top:60px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>认人练习</h1>
+  <button onclick="start()">开始练习</button>
+</div>
+<script>
+var family = [];
+var queue = [], wrongQueue = [], current = "", isRetry = false;
+var totalCorrect = 0, totalAnswered = 0;
+
+// 从 config.json 加载人物
+async function loadConfig() {
+  try {
+    var res = await fetch('config.json?t=' + Date.now());
+    var data = await res.json();
+    family = data.family || [];
+  } catch(e) {
+    document.getElementById("app").innerHTML = '<div class="loading">加载失败，请刷新重试</div>';
+  }
+}
+
+// 从人物列表中随机抽一张照片作为题目，4个选项
+function generateQuestion() {
+  if(family.length < 2) {
+    document.getElementById("app").innerHTML = '<div class="loading">人物不足，请先在管理端添加至少2个人物</div>';
+    return null;
+  }
+  // 随机选一个人物作为正确答案
+  var correctPerson = family[Math.floor(Math.random() * family.length)];
+  if(!correctPerson.photos || correctPerson.photos.length === 0) {
+    return null; // 这人没照片，跳过
+  }
+  // 随机选他的一张照片
+  var photo = correctPerson.photos[Math.floor(Math.random() * correctPerson.photos.length)];
+  
+  // 生成4个选项（1个正确 + 3个干扰）
+  var opts = [correctPerson.name];
+  var others = family.filter(function(p){ return p.name !== correctPerson.name; });
+  // 打乱其他人，取前3个
+  others.sort(function(){return Math.random()-0.5;});
+  for(var i=0; i<Math.min(3, others.length); i++) {
+    opts.push(others[i].name);
+  }
+  // 打乱选项顺序
+  opts.sort(function(){return Math.random()-0.5;});
+  
+  return {
+    correct: correctPerson.name,
+    photo: photo,
+    options: opts
+  };
+}
+
+async function start(){
+  document.getElementById("app").innerHTML = '<div class="loading">加载中...</div>';
+  await loadConfig();
+  
+  if(family.length < 2) {
+    document.getElementById("app").innerHTML = '<div class="loading">人物不足，请先在管理端添加至少2个人物</div>';
+    return;
+  }
+  
+  // 为每个人物至少出一道题，题目数量 = 人物数（每人随机抽一张照片）
+  queue = [];
+  family.forEach(function(p){
+    if(p.photos && p.photos.length > 0) {
+      queue.push(p.name);
+    }
+  });
+  queue.sort(function(){return Math.random()-0.5;});
+  
+  wrongQueue = [];
+  isRetry = false;
+  totalCorrect = 0;
+  totalAnswered = 0;
+  
+  document.getElementById("app").innerHTML = `
+    <h1>请看图</h1>
+    <div id="progress"></div>
+    <img id="q" src="" alt="题目">
+    <div class="options" id="opts"></div>
+    <div id="result"></div>
+  `;
+  next();
+}
+
+function next(){
+  if(queue.length === 0 && !isRetry){
+    if(wrongQueue.length === 0){
+      showSummary(true);
+      return;
+    }
+    isRetry = true;
+    queue = [...wrongQueue].sort(function(){return Math.random()-0.5;});
+    wrongQueue = [];
+    document.getElementById("progress").innerText = "第一轮结束，开始错题重考！";
+    setTimeout(next, 1000);
+    return;
+  }
+  if(queue.length === 0){
+    showSummary(wrongQueue.length === 0);
+    return;
+  }
+  
+  var personName = queue.shift();
+  var person = family.find(function(p){return p.name === personName;});
+  if(!person || !person.photos || person.photos.length === 0) {
+    next(); // 跳过没照片的
+    return;
+  }
+  var photo = person.photos[Math.floor(Math.random() * person.photos.length)];
+  current = person.name;
+  
+  document.getElementById("q").src = photo;
+  document.getElementById("progress").innerText = isRetry ? '错题重考（剩'+queue.length+'题）' : '第'+(totalAnswered+1)+'题（剩'+queue.length+'题）';
+  
+  // 生成选项
+  var opts = [current];
+  var others = family.filter(function(p){ return p.name !== current; });
+  others.sort(function(){return Math.random()-0.5;});
+  for(var i=0; i<Math.min(3, others.length); i++) {
+    opts.push(others[i].name);
+  }
+  opts.sort(function(){return Math.random()-0.5;});
+  
+  document.getElementById("opts").innerHTML = opts.map(function(n){ return '<button class="opt" onclick="ans(\''+n+'\')">'+n+'</button>'; }).join('');
+  document.getElementById("result").innerText = "";
+}
+
+function ans(a){
+  totalAnswered++;
+  document.querySelectorAll('.opt').forEach(function(b){ b.disabled = true; });
+  
+  if(a === current){
+    totalCorrect++;
+    document.getElementById("result").innerText = "✅ 对！";
+    confetti({ particleCount: 50, spread: 60, origin: { x: 0.8, y: 0.5 }, colors: ['#4CAF50','#FFEB3B'] });
+  } else {
+    document.getElementById("result").innerText = '❌ 错，是【'+current+'】';
+    wrongQueue.push(current);
+  }
+  setTimeout(next, 1200);
+}
+
+function showSummary(perfect){
+  var html = '<h1>练习结束</h1>';
+  if(perfect) {
+    html += '<div class="celebrate">🎉 太棒了！全部正确！ 🎉</div>';
+    confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+    setTimeout(function(){ confetti({ particleCount: 150, angle: 60, spread: 80, origin: { x: 0 } }); }, 300);
+    setTimeout(function(){ confetti({ particleCount: 150, angle: 120, spread: 80, origin: { x: 1 } }); }, 600);
+  } else {
+    html += '<div class="celebrate" style="color:#f44336">继续加油哦！</div>';
+  }
+  html += '<div class="summary"><p>总题数：'+totalAnswered+'</p><p>正确：'+totalCorrect+'</p><p>正确率：'+(totalAnswered?Math.round(totalCorrect/totalAnswered*100):0)+'%</p></div><button onclick="start()">再练一次</button>';
+  document.getElementById("app").innerHTML = html;
+}
+</script>
+</body>
+</html>
