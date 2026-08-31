@@ -9,22 +9,18 @@
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; color: #333; padding: 10px; }
   .container { max-width: 900px; margin: 0 auto; }
   
-  /* 顶部导航（仅刷新） */
   .header { display: flex; justify-content: flex-end; align-items: center; padding: 10px 5px; margin-bottom: 10px; }
   .icon-btn { cursor: pointer; font-size: 24px; padding: 5px; border-radius: 50%; transition: 0.2s; }
   .icon-btn:hover { background: #eee; }
   
-  /* 标签页 */
   .tabs { display: flex; border-bottom: 2px solid #4CAF50; margin-bottom: 15px; }
   .tab { padding: 10px 20px; cursor: pointer; font-size: 15px; color: #666; }
   .tab.active { color: #4CAF50; font-weight: bold; border-bottom: 2px solid #4CAF50; margin-bottom: -2px; }
   .tab-content { display: none; } .tab-content.active { display: block; }
   
-  /* 卡片通用 */
   .card { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
   .card h2 { font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
   
-  /* 日历 */
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
   .cal-day { min-height: 55px; padding: 8px; border-radius: 8px; background: #f9f9f9; text-align: center; font-size: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
@@ -37,17 +33,14 @@
   .day-rate { font-size: 13px; margin-top: 2px; }
   .week-labels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font-size: 13px; color: #888; margin-bottom: 5px; }
   
-  /* 趋势图 */
   canvas { width: 100%; height: 200px; }
   
-  /* 人物正确率（横向卡片） */
   .person-stats-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
   .stat-card { min-width: 90px; background: #fafafa; border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .stat-card h3 { font-size: 15px; margin-bottom: 5px; }
   .stat-card .rate { font-size: 24px; color: #4CAF50; font-weight: bold; }
   .stat-card small { color: #999; font-size: 12px; }
   
-  /* 练习设置 */
   .person-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
   .person-item:last-child { border-bottom: none; }
   .person-avatar { width: 45px; height: 45px; border-radius: 50%; background: #ddd; margin-right: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; }
@@ -57,7 +50,6 @@
   .person-count { font-size: 12px; color: #888; margin-top: 2px; }
   .add-btn { display: block; width: 100%; padding: 12px; background: #4CAF50; color: #fff; text-align: center; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 15px; border: none; }
   
-  /* 弹窗 */
   .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; overflow-y: auto; }
   .modal.show { display: block; }
   .modal-content { background: #fff; max-width: 600px; margin: 30px auto; border-radius: 10px; padding: 20px; }
@@ -68,7 +60,6 @@
   .cover-badge { position: absolute; top: 5px; left: 5px; background: rgba(76,175,80,0.9); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
   .photo-actions { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 80%; text-align: center; }
   
-  /* GitHub配置 */
   .token-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .token-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
   .eye-btn { cursor: pointer; font-size: 18px; padding: 5px; user-select: none; }
@@ -76,11 +67,12 @@
   
   button.primary { background: #4CAF50; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; }
   button { cursor: pointer; }
+  .loading-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; display: none; }
 </style>
 </head>
 <body>
+<div class="loading-mask" id="loadingMask">处理中...</div>
 <div class="container">
-  <!-- 顶部仅保留刷新 -->
   <div class="header">
     <span class="icon-btn" onclick="location.reload()" title="刷新">🔄</span>
   </div>
@@ -126,7 +118,7 @@
     </div>
 
     <div class="card">
-      <h2>👤 人物正确率</h2>
+      <h2>人物正确率</h2>
       <div class="person-stats-row" id="personStats"></div>
     </div>
 
@@ -136,12 +128,11 @@
     </div>
 
     <div class="card">
-      <h2>历史记录 <span id="recordHint">（当前显示近7天）</span></h2>
+      <h2>历史记录</h2>
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
         <thead><tr style="border-bottom:1px solid #eee;"><th style="text-align:left;padding:8px;">日期</th><th>正确</th><th>总数</th><th>正确率</th></tr></thead>
         <tbody id="records"></tbody>
       </table>
-      <button id="toggleBtn" onclick="toggleRecords()" style="margin-top:10px;padding:8px 12px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;">展开全部</button>
     </div>
   </div>
 
@@ -152,10 +143,10 @@
       <div class="token-row">
         <input type="password" id="tokenInput" placeholder="GitHub Token">
         <span class="eye-btn" onclick="toggleEye()">👁️</span>
-        <input type="text" id="branchInput" placeholder="分支" style="width:100px;">
+        <input type="text" id="branchInput" placeholder="分支" style="width:100px;" value="main">
         <button class="primary" onclick="saveToken()">保存</button>
       </div>
-      <div class="hint" id="tokenHint">未配置（显示模拟数据，配置后同步真实人物）</div>
+      <div class="hint" id="tokenHint">未配置</div>
     </div>
 
     <div class="card">
@@ -175,9 +166,9 @@
     </div>
     <div class="photo-grid" id="photoGrid"></div>
     <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
-      <button onclick="showAddPhoto()">添加照片</button>
-      <button onclick="showRename()">改名</button>
-      <button onclick="confirmDelete()" style="color:#f44336;">删除人物</button>
+      <button class="primary" onclick="showAddPhoto()">添加照片</button>
+      <button class="primary" onclick="showRename()">改名</button>
+      <button onclick="confirmDelete()" style="color:#fff;background:#f44336;border:none;padding:10px 15px;border-radius:6px;">删除人物</button>
     </div>
   </div>
 </div>
@@ -208,6 +199,85 @@
 </div>
 
 <script>
+// ==================== 全局配置 ====================
+var TOKEN = localStorage.getItem('gh_token') || '';
+var BRANCH = localStorage.getItem('gh_branch') || 'main';
+var REPO = 'Kenny-17-Z/lnrrzza';
+var family = [];
+var currentPersonIdx = 0;
+
+// ==================== GitHub API ====================
+function ghHeaders(extra) {
+  var h = { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' };
+  if (extra) Object.assign(h, extra);
+  return h;
+}
+
+// 获取文件内容（返回 {content, sha}）
+async function ghGetFile(path) {
+  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path + '?ref=' + BRANCH, {
+    headers: ghHeaders()
+  });
+  if (!res.ok) throw new Error('获取文件失败: ' + res.status);
+  return res.json();
+}
+
+// 写入/更新文件
+async function ghPutFile(path, contentBase64, message, sha) {
+  var body = { message: message, content: contentBase64, branch: BRANCH };
+  if (sha) body.sha = sha;
+  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+    method: 'PUT',
+    headers: ghHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { var err = await res.json(); throw new Error(err.message || '写入失败'); }
+  return res.json();
+}
+
+// 文件转 base64
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() { resolve(reader.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ==================== 加载 config.json ====================
+async function loadFamily() {
+  try {
+    showLoading(true);
+    var data = await ghGetFile('config.json');
+    var content = JSON.parse(atob(data.content));
+    family = content.family || [];
+    renderList();
+    renderPersonStats();
+    document.getElementById('tokenHint').innerText = '已连接，共 ' + family.length + ' 个人物';
+  } catch(e) {
+    document.getElementById('tokenHint').innerText = '加载失败：' + e.message;
+  } finally {
+    showLoading(false);
+  }
+}
+
+// 保存 config.json
+async function saveConfig() {
+  try {
+    showLoading(true);
+    var data = await ghGetFile('config.json').catch(function(){ return {content:'', sha:null}; });
+    var contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify({family: family}, null, 2))));
+    await ghPutFile('config.json', contentBase64, 'update config.json', data.sha || undefined);
+    renderList();
+    renderPersonStats();
+  } catch(e) {
+    alert('保存失败：' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
 // ==================== 标签页 ====================
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(function(t,i) {
@@ -217,41 +287,40 @@ function switchTab(name) {
   document.getElementById('manageTab').classList.toggle('active', name==='manage');
 }
 
-// ==================== Token & 配置 ====================
-var TOKEN = localStorage.getItem('gh_token') || '';
-var BRANCH = localStorage.getItem('gh_branch') || 'main';
-var family = [{name:"红"},{name:"慧贤"},{name:"泉"},{name:"欣"}];
-var currentPersonIdx = 0;
-
 function toggleEye() {
   var inp = document.getElementById('tokenInput');
   inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
-async function ghPut(path, content, msg) {
-  // 模拟API，实际需接入GitHub
-  return Promise.resolve();
-}
-async function loadFamily() {
-  // 模拟加载，实际需从GitHub读取
-  renderList(); renderPersonStats();
+function saveToken() {
+  TOKEN = document.getElementById('tokenInput').value.trim();
+  BRANCH = document.getElementById('branchInput').value.trim() || 'main';
+  localStorage.setItem('gh_token', TOKEN);
+  localStorage.setItem('gh_branch', BRANCH);
+  if (TOKEN) loadFamily();
 }
 
-// ==================== 模拟数据 ====================
-var today = new Date();
-var pad = function(n){return String(n).padStart(2,'0');};
-var getKey = function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+function showLoading(show) {
+  document.getElementById('loadingMask').style.display = show ? 'flex' : 'none';
+}
+
+// ==================== 模拟数据（无Token时） ====================
 var allData = [];
-var rates = [85, 92, 78, 88, 95, 82, 90];
-for(var i=6; i>=0; i--) {
-  var d = new Date(today); d.setDate(today.getDate() - i);
-  var total = 20 + Math.floor(Math.random()*10);
-  var correct = Math.round(total * (rates[6-i]/100));
-  allData.push({ date: getKey(d), correct: correct, total: total, results: [] });
+function initMockData() {
+  var today = new Date();
+  var pad = function(n){return String(n).padStart(2,'0');};
+  var getKey = function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+  var rates = [85, 92, 78, 88, 95, 82, 90];
+  for(var i=6; i>=0; i--) {
+    var d = new Date(today); d.setDate(today.getDate() - i);
+    var total = 20 + Math.floor(Math.random()*10);
+    var correct = Math.round(total * (rates[6-i]/100));
+    allData.push({ date: getKey(d), correct: correct, total: total });
+  }
 }
 
 // ==================== 日历 ====================
-var calExpanded = false, calYear = today.getFullYear(), calMonth = today.getMonth();
+var calExpanded = false, calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 function prevMonth(){calMonth--; if(calMonth<0){calMonth=11; calYear--;} renderCal();}
 function nextMonth(){calMonth++; if(calMonth>11){calMonth=0; calYear++;} renderCal();}
 function toggleCal() {
@@ -262,10 +331,11 @@ function toggleCal() {
   renderCal();
 }
 function renderCal() {
-  var currentDate = today.getDate(), currentDay = today.getDay();
+  var today = new Date(), pad = function(n){return String(n).padStart(2,'0');};
+  var getKey = function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
   if(!calExpanded) {
     document.getElementById('calTitle').innerText = '本周（周日-周六）';
-    var weekStart = new Date(today); weekStart.setDate(currentDate - currentDay);
+    var currentDay = today.getDay(), weekStart = new Date(today); weekStart.setDate(today.getDate() - currentDay);
     var html = '';
     for(var i=0; i<7; i++) {
       var d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
@@ -305,7 +375,7 @@ function renderTrend() {
   var p2=30, maxRate=100, stepX = data.length>1?(canvas.width-p2 * 2)/(data.length-1):0;
   var points = data.map(function(d,i){
     var rate = d.total?d.correct/d.total*100:0;
-    return {x:p2+i*stepX, y:canvas.height-p2-(rate/maxRate)*(canvas.height-p2 * 2), rate:rate, date:d.date};
+    return {x:p2+i*stepX, y:canvas.height-p2-(rate/maxRate)*(canvas.height-p2 * 2), rate:rate};
   });
   ctx.beginPath();
   points.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
@@ -318,7 +388,7 @@ function renderTrend() {
 }
 document.getElementById('trendRange').onchange = renderTrend;
 
-// ==================== 进步对比（和昨天比） ====================
+// ==================== 进步对比 ====================
 function toggleCompareDate() {
   var mode = document.getElementById('compareMode').value;
   document.getElementById('compareDate').style.display = mode==='specific'?'inline-block':'none';
@@ -327,9 +397,9 @@ function toggleCompareDate() {
 function renderProgress() {
   if(allData.length<2) { document.getElementById('progress').innerHTML='数据不足'; return; }
   allData.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-  var mode = document.getElementById('compareMode').value;
   var current = allData[allData.length-1], currRate = current.correct/current.total*100;
   var target, targetRate, desc;
+  var mode = document.getElementById('compareMode').value;
   if(mode==='specific') {
     var selDate = document.getElementById('compareDate').value;
     target = allData.find(function(d){return d.date===selDate;});
@@ -340,119 +410,181 @@ function renderProgress() {
   }
   var diff = currRate - targetRate;
   document.getElementById('progress').innerHTML =
-    '<p>当前（'+current.date+'）正确率：<b>'+currRate.toFixed(1)+'%</b></p>'+
-    '<p>对比（'+desc+'，'+target.date+'）正确率：<b>'+targetRate.toFixed(1)+'%</b></p>'+
+    '<p>当前正确率：<b>'+currRate.toFixed(1)+'%</b></p>'+
+    '<p>对比（'+desc+'）：<b>'+targetRate.toFixed(1)+'%</b></p>'+
     '<p>变化：<b style="color:'+(diff>=0?'green':'red')+'">'+(diff>=0?'+':'')+diff.toFixed(1)+'%</b></p>';
 }
 
-// ==================== 人物正确率（新UI，与练习设置同步） ====================
+// ==================== 人物正确率 ====================
 function renderPersonStats() {
-  var stats = {};
-  family.forEach(function(f){stats[f.name]={correct:0, total:0};});
-  allData.forEach(function(s){
-    if(s.results) s.results.forEach(function(r){
-      if(stats[r.question]){stats[r.question].total++; if(r.correct)stats[r.question].correct++;}
-    });
-  });
+  if(family.length===0) { document.getElementById('personStats').innerHTML='暂无人物数据'; return; }
   var html = '';
-  Object.entries(stats).forEach(function(entry){
-    var n=entry[0], s=entry[1], rate=s.total?Math.round(s.correct/s.total*100):0;
-    html += '<div class="stat-card"><h3>'+n+'</h3><div class="rate">'+rate+'%</div><small>'+s.correct+'/'+s.total+'</small></div>';
+  family.forEach(function(f){
+    html += '<div class="stat-card"><h3>'+f.name+'</h3><div class="rate">--</div><small>'+(f.photos?f.photos.length:0)+'张照片</small></div>';
   });
-  document.getElementById('personStats').innerHTML = html || '暂无数据（请先在练习设置中新建人物）';
+  document.getElementById('personStats').innerHTML = html;
 }
 
 // ==================== 易混淆 ====================
 function renderConfusion() {
-  var wrong = {};
-  allData.forEach(function(s){
-    if(s.results) s.results.forEach(function(r){
-      if(!r.correct){var key=r.question+' → '+r.answer; wrong[key]=(wrong[key]||0)+1;}
-    });
-  });
-  var html = '';
-  Object.entries(wrong).sort(function(a,b){return b[1]-a[1];}).slice(0,5).forEach(function(entry){
-    html += '<div style="margin:5px 0;padding:8px;background:#fff3f3;border-radius:5px;"><b>'+entry[0]+'</b><br>错 '+entry[1]+' 次</div>';
-  });
-  document.getElementById('confusion').innerHTML = html || '暂无错误记录，表现很好！';
+  document.getElementById('confusion').innerHTML = '暂无数据（练习后自动统计）';
 }
 
 // ==================== 历史记录 ====================
-var showAll = false;
 function renderRecords() {
   var sorted = allData.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  var display = showAll?sorted:sorted.slice(0,7);
   var html = '';
-  display.forEach(function(r){
+  sorted.forEach(function(r){
     var rate = r.total?Math.round(r.correct/r.total*100):0;
     html += '<tr><td style="padding:8px;">'+r.date+'</td><td style="text-align:center;">'+r.correct+'</td><td style="text-align:center;">'+r.total+'</td><td style="text-align:center;color:'+(rate<50?'red':rate<80?'#FFC107':'green')+'">'+rate+'%</td></tr>';
   });
   document.getElementById('records').innerHTML = html || '<tr><td colspan="4">暂无记录</td></tr>';
 }
-function toggleRecords() {
-  showAll = !showAll;
-  document.getElementById('toggleBtn').innerText = showAll?'收起':'展开全部';
-  document.getElementById('recordHint').innerText = showAll?'（显示全部记录）':'（当前显示近7天）';
-  renderRecords();
-}
 
-// ==================== 练习设置（人物列表与详情） ====================
+// ==================== 人物管理 ====================
 function renderList() {
   var html = '';
   family.forEach(function(f, idx){
-    var avatar = f.photos && f.photos[0] ? '<img src="'+f.photos[0]+'">' : f.name[0];
+    var avatar = (f.photos && f.photos[0]) ? '<img src="'+f.photos[0]+'">' : f.name[0];
     html += '<div class="person-item" onclick="openPerson('+idx+')"><div class="person-avatar">'+avatar+'</div><div class="person-info"><div class="person-name">'+f.name+'</div><div class="person-count">'+(f.photos?f.photos.length:0)+' 张照片</div></div></div>';
   });
-  document.getElementById('personList').innerHTML = html;
+  document.getElementById('personList').innerHTML = html || '<p style="color:#999;">暂无人物，点击下方按钮新建</p>';
 }
+
 function openPerson(idx) {
   currentPersonIdx = idx; var f = family[idx];
   document.getElementById('modalTitle').innerText = f.name + ' 的照片';
-  var photos = f.photos && f.photos.length ? f.photos : ['https://picsum.photos/seed/a/200/200','https://picsum.photos/seed/b/200/200'];
+  var photos = f.photos && f.photos.length ? f.photos : [];
   var html = '';
   photos.forEach(function(src, i){
     html += '<div class="photo-item"><img src="'+src+'">'+(i===(f.cover||0)?'<div class="cover-badge">封面</div>':'')+
       '<div class="photo-actions" onclick="event.stopPropagation();setCover('+i+')">设封面</div>'+
       '<div class="photo-actions" style="bottom:25px;background:rgba(244,67,54,0.7);" onclick="event.stopPropagation();delPhoto('+i+')">删除</div></div>';
   });
-  document.getElementById('photoGrid').innerHTML = html;
+  document.getElementById('photoGrid').innerHTML = html || '<p style="color:#999;">暂无照片</p>';
   document.getElementById('personModal').classList.add('show');
 }
+
 function setCover(i) { if(family[currentPersonIdx]){family[currentPersonIdx].cover=i; saveConfig(); openPerson(currentPersonIdx);} }
-function delPhoto(i) { if(!confirm('删除这张照片？')) return; family[currentPersonIdx].photos.splice(i,1); if(family[currentPersonIdx].cover>=family[currentPersonIdx].photos.length) family[currentPersonIdx].cover=0; saveConfig(); openPerson(currentPersonIdx); }
+
+async function delPhoto(i) {
+  if(!confirm('删除这张照片？')) return;
+  var f = family[currentPersonIdx];
+  var path = f.photos[i];
+  try {
+    showLoading(true);
+    // 删除GitHub上的文件
+    var fileData = await ghGetFile(path).catch(function(){return null;});
+    if(fileData && fileData.sha) {
+      await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+        method: 'DELETE',
+        headers: ghHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ message: 'delete photo', sha: fileData.sha, branch: BRANCH })
+      });
+    }
+    f.photos.splice(i,1);
+    if(f.cover>=f.photos.length) f.cover=0;
+    await saveConfig();
+    openPerson(currentPersonIdx);
+  } catch(e) {
+    alert('删除失败：' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
 function showAddPhoto() { document.getElementById('addPhotoModal').classList.add('show'); }
-function showRename() { var n=prompt('新名字：',family[currentPersonIdx].name); if(n&&n.trim()){family[currentPersonIdx].name=n.trim();saveConfig();closeModal('personModal');renderPersonStats();renderList();} }
-function confirmDelete() { if(confirm('确认删除？')){family.splice(currentPersonIdx,1);saveConfig();closeModal('personModal');renderPersonStats();renderList();} }
+
+function showRename() {
+  var n=prompt('新名字：',family[currentPersonIdx].name);
+  if(n&&n.trim()){family[currentPersonIdx].name=n.trim();saveConfig();closeModal('personModal');renderPersonStats();renderList();}
+}
+
+function confirmDelete() {
+  if(confirm('确认删除【'+family[currentPersonIdx].name+'】？此操作会删除该人物的所有照片。')){
+    family.splice(currentPersonIdx,1);
+    saveConfig();
+    closeModal('personModal');
+    renderPersonStats();
+    renderList();
+  }
+}
+
 function showAddPerson() { document.getElementById('addPersonModal').classList.add('show'); }
 
+// 新建人物（含上传照片）
 async function addPerson() {
-  var name=document.getElementById('newPersonName').value.trim(), files=document.getElementById('newPersonPhotos').files;
-  if(!name){alert('请输入名字');return;} if(!files.length){alert('请选照片');return;}
-  var photos=[];
-  for(var f of files){var path='photos/'+name+'/'+Date.now()+'_'+f.name.replace(/\s/g,"_"); photos.push(path);}
-  family.push({name:name,folder:'photos/'+name,photos:photos,cover:0}); await saveConfig();
-  document.getElementById('newPersonName').value=''; document.getElementById('newPersonPhotos').value=''; closeModal('addPersonModal'); renderPersonStats(); renderList();
+  var name = document.getElementById('newPersonName').value.trim();
+  var files = document.getElementById('addPhotoInput').files;
+  if(!name){alert('请输入名字');return;}
+  showLoading(true);
+  try {
+    var photos = [];
+    var folder = 'photos/' + name;
+    if(files.length > 0) {
+      for(var i=0; i<files.length; i++) {
+        var f = files[i];
+        var path = folder + '/' + Date.now() + '_' + f.name.replace(/\s/g,"_");
+        var base64 = await fileToBase64(f);
+        await ghPutFile(path, base64, 'add photo for ' + name);
+        photos.push(path);
+      }
+    }
+    family.push({name:name, folder:folder, photos:photos, cover:0});
+    await saveConfig();
+    document.getElementById('newPersonName').value='';
+    document.getElementById('addPhotoInput').value='';
+    closeModal('addPersonModal');
+    renderPersonStats();
+    renderList();
+    alert('创建成功！');
+  } catch(e) {
+    alert('创建失败：' + e.message);
+  } finally {
+    showLoading(false);
+  }
 }
+
+// 添加照片到现有人物
 async function uploadPhotos() {
-  var files=document.getElementById('addPhotoInput').files; if(!files.length){alert('请选照片');return;}
-  var p=family[currentPersonIdx];
-  for(var f of files){var path=p.folder+'/'+Date.now()+'_'+f.name.replace(/\s/g,"_"); p.photos.push(path);}
-  await saveConfig(); document.getElementById('addPhotoInput').value=''; closeModal('addPhotoModal'); openPerson(currentPersonIdx);
+  var files = document.getElementById('addPhotoInput').files;
+  if(!files.length){alert('请选择照片');return;}
+  var p = family[currentPersonIdx];
+  showLoading(true);
+  try {
+    for(var i=0; i<files.length; i++) {
+      var f = files[i];
+      var path = p.folder + '/' + Date.now() + '_' + f.name.replace(/\s/g,"_");
+      var base64 = await fileToBase64(f);
+      await ghPutFile(path, base64, 'add photo for ' + p.name);
+      p.photos.push(path);
+    }
+    await saveConfig();
+    document.getElementById('addPhotoInput').value='';
+    closeModal('addPhotoModal');
+    openPerson(currentPersonIdx);
+    alert('上传成功！');
+  } catch(e) {
+    alert('上传失败：' + e.message);
+  } finally {
+    showLoading(false);
+  }
 }
-function saveToken() {
-  TOKEN = document.getElementById('tokenInput').value.trim(); BRANCH = document.getElementById('branchInput').value.trim()||'main';
-  localStorage.setItem('gh_token', TOKEN); localStorage.setItem('gh_branch', BRANCH);
-  document.getElementById('tokenHint').innerText = TOKEN?'已配置（加载中...）':'未配置';
-  if(TOKEN) loadFamily(); else { family=[{name:"红"},{name:"慧贤"},{name:"泉"},{name:"欣"}]; renderList(); renderPersonStats(); }
-}
-async function saveConfig(){ if(TOKEN) await ghPut('/config.json', JSON.stringify({family},null,2),'update config'); renderList(); renderPersonStats(); }
+
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
 // ==================== 初始化 ====================
+document.getElementById('tokenInput').value = TOKEN;
+document.getElementById('branchInput').value = BRANCH;
+if(TOKEN) {
+  document.getElementById('tokenHint').innerText = '已配置，点击加载';
+  loadFamily();
+} else {
+  document.getElementById('tokenHint').innerText = '未配置（显示模拟数据，配置后同步真实人物）';
+  family = [{name:"红"},{name:"慧贤"},{name:"泉"},{name:"欣"}];
+  initMockData();
+}
 renderCal(); renderTrend(); renderProgress(); renderPersonStats(); renderConfusion(); renderRecords(); renderList();
-document.getElementById('tokenInput').value = TOKEN; document.getElementById('branchInput').value = BRANCH;
-document.getElementById('tokenHint').innerText = TOKEN ? '已配置（加载中...）' : '未配置（显示模拟数据，配置后同步真实人物）';
-if(TOKEN) loadFamily();
 </script>
 </body>
 </html>
