@@ -68,6 +68,7 @@
   button.primary { background: #4CAF50; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; }
   button { cursor: pointer; }
   .loading-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; display: none; }
+  .no-data { color: #999; text-align: center; padding: 20px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -204,6 +205,7 @@ var TOKEN = localStorage.getItem('gh_token') || '';
 var BRANCH = localStorage.getItem('gh_branch') || 'main';
 var REPO = 'Kenny-17-Z/lnrrzza';
 var family = [];
+var practiceData = [];  // 从 data.json 加载
 var currentPersonIdx = 0;
 
 // ==================== GitHub API ====================
@@ -213,7 +215,6 @@ function ghHeaders(extra) {
   return h;
 }
 
-// 获取文件内容（返回 {content, sha}）
 async function ghGetFile(path) {
   var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path + '?ref=' + BRANCH, {
     headers: ghHeaders()
@@ -222,7 +223,6 @@ async function ghGetFile(path) {
   return res.json();
 }
 
-// 写入/更新文件
 async function ghPutFile(path, contentBase64, message, sha) {
   var body = { message: message, content: contentBase64, branch: BRANCH };
   if (sha) body.sha = sha;
@@ -235,7 +235,15 @@ async function ghPutFile(path, contentBase64, message, sha) {
   return res.json();
 }
 
-// 文件转 base64
+async function ghDeleteFile(path, sha, message) {
+  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+    method: 'DELETE',
+    headers: ghHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ message: message, sha: sha, branch: BRANCH })
+  });
+  if (!res.ok) { var err = await res.json(); throw new Error(err.message || '删除失败'); }
+}
+
 function fileToBase64(file) {
   return new Promise(function(resolve, reject) {
     var reader = new FileReader();
@@ -245,7 +253,7 @@ function fileToBase64(file) {
   });
 }
 
-// ==================== 加载 config.json ====================
+// ==================== 加载 config.json 和 data.json ====================
 async function loadFamily() {
   try {
     showLoading(true);
@@ -260,6 +268,17 @@ async function loadFamily() {
   } finally {
     showLoading(false);
   }
+}
+
+async function loadPracticeData() {
+  try {
+    var data = await ghGetFile('data.json');
+    var content = JSON.parse(atob(data.content));
+    practiceData = content.records || [];
+  } catch(e) {
+    practiceData = [];
+  }
+  renderCal(); renderTrend(); renderProgress(); renderConfusion(); renderRecords();
 }
 
 // 保存 config.json
@@ -297,26 +316,11 @@ function saveToken() {
   BRANCH = document.getElementById('branchInput').value.trim() || 'main';
   localStorage.setItem('gh_token', TOKEN);
   localStorage.setItem('gh_branch', BRANCH);
-  if (TOKEN) loadFamily();
+  if (TOKEN) { loadFamily(); loadPracticeData(); }
 }
 
 function showLoading(show) {
   document.getElementById('loadingMask').style.display = show ? 'flex' : 'none';
-}
-
-// ==================== 模拟数据（无Token时） ====================
-var allData = [];
-function initMockData() {
-  var today = new Date();
-  var pad = function(n){return String(n).padStart(2,'0');};
-  var getKey = function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
-  var rates = [85, 92, 78, 88, 95, 82, 90];
-  for(var i=6; i>=0; i--) {
-    var d = new Date(today); d.setDate(today.getDate() - i);
-    var total = 20 + Math.floor(Math.random()*10);
-    var correct = Math.round(total * (rates[6-i]/100));
-    allData.push({ date: getKey(d), correct: correct, total: total });
-  }
 }
 
 // ==================== 日历 ====================
@@ -339,7 +343,7 @@ function renderCal() {
     var html = '';
     for(var i=0; i<7; i++) {
       var d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
-      var key = getKey(d), recs = allData.filter(function(r){return r.date===key;});
+      var key = getKey(d), recs = practiceData.filter(function(r){return r.date===key;});
       if(recs.length>0) {
         var total = recs.reduce(function(a,b){return a+b.total;},0), correct = recs.reduce(function(a,b){return a+b.correct;},0);
         var rate = Math.round(correct/total*100), cls = rate>=80?'green':rate>=50?'yellow':'red';
@@ -353,7 +357,7 @@ function renderCal() {
     var html = '';
     for(var i=0; i<firstDay; i++) html += '<div class="cal-day empty"></div>';
     for(var d=1; d<=daysInMonth; d++) {
-      var key = calYear+'-'+pad(calMonth+1)+'-'+pad(d), recs = allData.filter(function(r){return r.date===key;});
+      var key = calYear+'-'+pad(calMonth+1)+'-'+pad(d), recs = practiceData.filter(function(r){return r.date===key;});
       if(recs.length>0) {
         var total = recs.reduce(function(a,b){return a+b.total;},0), correct = recs.reduce(function(a,b){return a+b.correct;},0);
         var rate = Math.round(correct/total*100), cls = rate>=80?'green':rate>=50?'yellow':'red';
@@ -370,7 +374,9 @@ function renderTrend() {
   var canvas = document.getElementById('trendCanvas'), ctx = canvas.getContext('2d');
   canvas.width = canvas.offsetWidth || 300; canvas.height = 200;
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  var data = allData.slice(-range);
+  if(practiceData.length===0){ctx.fillStyle='#999';ctx.font='16px sans-serif';ctx.fillText('暂无练习数据',canvas.width/2-50,canvas.height/2);return;}
+  var sorted = practiceData.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  var data = sorted.slice(-range);
   if(data.length<1) return;
   var p2=30, maxRate=100, stepX = data.length>1?(canvas.width-p2 * 2)/(data.length-1):0;
   var points = data.map(function(d,i){
@@ -395,50 +401,79 @@ function toggleCompareDate() {
   renderProgress();
 }
 function renderProgress() {
-  if(allData.length<2) { document.getElementById('progress').innerHTML='数据不足'; return; }
-  allData.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-  var current = allData[allData.length-1], currRate = current.correct/current.total*100;
+  if(practiceData.length<2) { document.getElementById('progress').innerHTML='<div class="no-data">数据不足，至少需2天练习记录</div>'; return; }
+  practiceData.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  var current = practiceData[practiceData.length-1], currRate = current.correct/current.total*100;
   var target, targetRate, desc;
   var mode = document.getElementById('compareMode').value;
   if(mode==='specific') {
     var selDate = document.getElementById('compareDate').value;
-    target = allData.find(function(d){return d.date===selDate;});
-    if(!target) { document.getElementById('progress').innerHTML='所选日期无记录'; return; }
+    target = practiceData.find(function(d){return d.date===selDate;});
+    if(!target) { document.getElementById('progress').innerHTML='<div class="no-data">所选日期无记录</div>'; return; }
     targetRate = target.correct/target.total*100; desc = '指定日期';
   } else {
-    target = allData[allData.length-2]; targetRate = target.correct/target.total*100; desc = '和昨天比';
+    target = practiceData[practiceData.length-2]; targetRate = target.correct/target.total*100; desc = '和昨天比';
   }
   var diff = currRate - targetRate;
   document.getElementById('progress').innerHTML =
-    '<p>当前正确率：<b>'+currRate.toFixed(1)+'%</b></p>'+
-    '<p>对比（'+desc+'）：<b>'+targetRate.toFixed(1)+'%</b></p>'+
+    '<p>当前（'+current.date+'）正确率：<b>'+currRate.toFixed(1)+'%</b></p>'+
+    '<p>对比（'+desc+'，'+target.date+'）正确率：<b>'+targetRate.toFixed(1)+'%</b></p>'+
     '<p>变化：<b style="color:'+(diff>=0?'green':'red')+'">'+(diff>=0?'+':'')+diff.toFixed(1)+'%</b></p>';
 }
 
 // ==================== 人物正确率 ====================
 function renderPersonStats() {
-  if(family.length===0) { document.getElementById('personStats').innerHTML='暂无人物数据'; return; }
+  if(family.length===0) { document.getElementById('personStats').innerHTML='<div class="no-data">暂无人物，请先在练习设置中新建</div>'; return; }
+  if(practiceData.length===0) {
+    var html = '';
+    family.forEach(function(f){
+      html += '<div class="stat-card"><h3>'+f.name+'</h3><div class="rate">--</div><small>'+(f.photos?f.photos.length:0)+'张照片</small></div>';
+    });
+    document.getElementById('personStats').innerHTML = html;
+    return;
+  }
+  // 从练习数据中统计每个人物正确率
+  var stats = {};
+  family.forEach(function(f){stats[f.name]={correct:0,total:0};});
+  practiceData.forEach(function(s){
+    if(s.details) s.details.forEach(function(d){
+      if(stats[d.name]){stats[d.name].total++; if(d.correct)stats[d.name].correct++;}
+    });
+  });
   var html = '';
-  family.forEach(function(f){
-    html += '<div class="stat-card"><h3>'+f.name+'</h3><div class="rate">--</div><small>'+(f.photos?f.photos.length:0)+'张照片</small></div>';
+  Object.entries(stats).forEach(function(entry){
+    var n=entry[0], s=entry[1], rate=s.total?Math.round(s.correct/s.total*100):0;
+    html += '<div class="stat-card"><h3>'+n+'</h3><div class="rate">'+(s.total?rate+'%':'--')+'</div><small>'+s.correct+'/'+s.total+'</small></div>';
   });
   document.getElementById('personStats').innerHTML = html;
 }
 
 // ==================== 易混淆 ====================
 function renderConfusion() {
-  document.getElementById('confusion').innerHTML = '暂无数据（练习后自动统计）';
+  if(practiceData.length===0) { document.getElementById('confusion').innerHTML='<div class="no-data">暂无练习数据</div>'; return; }
+  var wrong = {};
+  practiceData.forEach(function(s){
+    if(s.details) s.details.forEach(function(d){
+      if(!d.correct){var key=d.name+' 答错'; wrong[key]=(wrong[key]||0)+1;}
+    });
+  });
+  var html = '';
+  Object.entries(wrong).sort(function(a,b){return b[1]-a[1];}).slice(0,5).forEach(function(entry){
+    html += '<div style="margin:5px 0;padding:8px;background:#fff3f3;border-radius:5px;"><b>'+entry[0]+'</b><br>错 '+entry[1]+' 次</div>';
+  });
+  document.getElementById('confusion').innerHTML = html || '<div class="no-data">暂无错误记录，表现很好！</div>';
 }
 
 // ==================== 历史记录 ====================
 function renderRecords() {
-  var sorted = allData.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  if(practiceData.length===0) { document.getElementById('records').innerHTML='<tr><td colspan="4" class="no-data">暂无练习记录</td></tr>'; return; }
+  var sorted = practiceData.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
   var html = '';
   sorted.forEach(function(r){
     var rate = r.total?Math.round(r.correct/r.total*100):0;
     html += '<tr><td style="padding:8px;">'+r.date+'</td><td style="text-align:center;">'+r.correct+'</td><td style="text-align:center;">'+r.total+'</td><td style="text-align:center;color:'+(rate<50?'red':rate<80?'#FFC107':'green')+'">'+rate+'%</td></tr>';
   });
-  document.getElementById('records').innerHTML = html || '<tr><td colspan="4">暂无记录</td></tr>';
+  document.getElementById('records').innerHTML = html;
 }
 
 // ==================== 人物管理 ====================
@@ -473,14 +508,9 @@ async function delPhoto(i) {
   var path = f.photos[i];
   try {
     showLoading(true);
-    // 删除GitHub上的文件
     var fileData = await ghGetFile(path).catch(function(){return null;});
     if(fileData && fileData.sha) {
-      await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
-        method: 'DELETE',
-        headers: ghHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ message: 'delete photo', sha: fileData.sha, branch: BRANCH })
-      });
+      await ghDeleteFile(path, fileData.sha, 'delete photo');
     }
     f.photos.splice(i,1);
     if(f.cover>=f.photos.length) f.cover=0;
@@ -501,7 +531,7 @@ function showRename() {
 }
 
 function confirmDelete() {
-  if(confirm('确认删除【'+family[currentPersonIdx].name+'】？此操作会删除该人物的所有照片。')){
+  if(confirm('确认删除【'+family[currentPersonIdx].name+'】？')){
     family.splice(currentPersonIdx,1);
     saveConfig();
     closeModal('personModal');
@@ -512,10 +542,9 @@ function confirmDelete() {
 
 function showAddPerson() { document.getElementById('addPersonModal').classList.add('show'); }
 
-// 新建人物（含上传照片）
 async function addPerson() {
   var name = document.getElementById('newPersonName').value.trim();
-  var files = document.getElementById('addPhotoInput').files;
+  var files = document.getElementById('newPersonPhotos').files;
   if(!name){alert('请输入名字');return;}
   showLoading(true);
   try {
@@ -533,7 +562,7 @@ async function addPerson() {
     family.push({name:name, folder:folder, photos:photos, cover:0});
     await saveConfig();
     document.getElementById('newPersonName').value='';
-    document.getElementById('addPhotoInput').value='';
+    document.getElementById('newPersonPhotos').value='';
     closeModal('addPersonModal');
     renderPersonStats();
     renderList();
@@ -545,7 +574,6 @@ async function addPerson() {
   }
 }
 
-// 添加照片到现有人物
 async function uploadPhotos() {
   var files = document.getElementById('addPhotoInput').files;
   if(!files.length){alert('请选择照片');return;}
@@ -577,12 +605,11 @@ function closeModal(id){document.getElementById(id).classList.remove('show');}
 document.getElementById('tokenInput').value = TOKEN;
 document.getElementById('branchInput').value = BRANCH;
 if(TOKEN) {
-  document.getElementById('tokenHint').innerText = '已配置，点击加载';
+  document.getElementById('tokenHint').innerText = '已配置，加载中...';
   loadFamily();
+  loadPracticeData();
 } else {
-  document.getElementById('tokenHint').innerText = '未配置（显示模拟数据，配置后同步真实人物）';
-  family = [{name:"红"},{name:"慧贤"},{name:"泉"},{name:"欣"}];
-  initMockData();
+  document.getElementById('tokenHint').innerText = '未配置（请填入 GitHub Token 以同步数据）';
 }
 renderCal(); renderTrend(); renderProgress(); renderPersonStats(); renderConfusion(); renderRecords(); renderList();
 </script>
