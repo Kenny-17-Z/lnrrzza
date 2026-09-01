@@ -67,12 +67,12 @@
   
   button.primary { background: #4CAF50; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; }
   button { cursor: pointer; }
-  .loading-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; display: none; }
+  .loading-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
   .no-data { color: #999; text-align: center; padding: 20px; font-size: 14px; }
 </style>
 </head>
 <body>
-<div class="loading-mask" id="loadingMask">处理中...</div>
+<div class="loading-mask" id="loadingMask" style="display:none;">处理中...</div>
 <div class="container">
   <div class="header">
     <span class="icon-btn" onclick="location.reload()" title="刷新">🔄</span>
@@ -205,8 +205,10 @@ var TOKEN = localStorage.getItem('gh_token') || '';
 var BRANCH = localStorage.getItem('gh_branch') || 'main';
 var REPO = 'Kenny-17-Z/lnrrzza';
 var family = [];
-var practiceData = [];  // 从 data.json 加载
+var practiceData = [];
 var currentPersonIdx = 0;
+
+console.log('[Init] TOKEN exists:', !!TOKEN, 'BRANCH:', BRANCH);
 
 // ==================== GitHub API ====================
 function ghHeaders(extra) {
@@ -216,22 +218,50 @@ function ghHeaders(extra) {
 }
 
 async function ghGetFile(path) {
+  console.log('[GET]', path);
   var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path + '?ref=' + BRANCH, {
     headers: ghHeaders()
   });
-  if (!res.ok) throw new Error('获取文件失败: ' + res.status);
+  console.log('[GET] status:', res.status, path);
+  if (!res.ok) {
+    var errText = await res.text();
+    console.error('[GET] error:', errText);
+    throw new Error('获取 ' + path + ' 失败: ' + res.status + ' ' + errText);
+  }
   return res.json();
 }
 
 async function ghPutFile(path, contentBase64, message, sha) {
   var body = { message: message, content: contentBase64, branch: BRANCH };
   if (sha) body.sha = sha;
+  console.log('[PUT]', path, 'SHA:', sha ? sha.substring(0,8)+'...' : 'none');
   var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
     method: 'PUT',
     headers: ghHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
-  if (!res.ok) { var err = await res.json(); throw new Error(err.message || '写入失败'); }
+  console.log('[PUT] status:', res.status, path);
+  if (!res.ok) {
+    var err = await res.json().catch(function(){ return {message:'未知错误'}; });
+    console.error('[PUT] error:', err);
+    // 409 = SHA冲突，自动重新获取再试一次
+    if (res.status === 409 && sha) {
+      console.log('[PUT] 409 conflict, retrying...');
+      var fresh = await ghGetFile(path);
+      body.sha = fresh.sha;
+      var res2 = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+        method: 'PUT',
+        headers: ghHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body)
+      });
+      if (!res2.ok) {
+        var err2 = await res2.json().catch(function(){ return {message:'重试也失败'}; });
+        throw new Error(err2.message || '写入失败(409重试)');
+      }
+      return res2.json();
+    }
+    throw new Error(err.message || '写入失败: ' + res.status);
+  }
   return res.json();
 }
 
@@ -241,7 +271,10 @@ async function ghDeleteFile(path, sha, message) {
     headers: ghHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ message: message, sha: sha, branch: BRANCH })
   });
-  if (!res.ok) { var err = await res.json(); throw new Error(err.message || '删除失败'); }
+  if (!res.ok) {
+    var err = await res.json().catch(function(){ return {message:'删除失败'}; });
+    throw new Error(err.message);
+  }
 }
 
 function fileToBase64(file) {
@@ -258,12 +291,16 @@ async function loadFamily() {
   try {
     showLoading(true);
     var data = await ghGetFile('config.json');
+    console.log('[loadFamily] raw content length:', data.content.length);
     var content = JSON.parse(atob(data.content));
     family = content.family || [];
     renderList();
     renderPersonStats();
     document.getElementById('tokenHint').innerText = '已连接，共 ' + family.length + ' 个人物';
+    console.log('[loadFamily] success, family count:', family.length);
   } catch(e) {
+    console.error('[loadFamily] error:', e);
+    alert('加载 config.json 失败：' + e.message);
     document.getElementById('tokenHint').innerText = '加载失败：' + e.message;
   } finally {
     showLoading(false);
@@ -276,21 +313,27 @@ async function loadPracticeData() {
     var content = JSON.parse(atob(data.content));
     practiceData = content.records || [];
   } catch(e) {
+    console.warn('[loadPracticeData] 无 data.json 或读取失败:', e.message);
     practiceData = [];
   }
   renderCal(); renderTrend(); renderProgress(); renderConfusion(); renderRecords();
 }
 
-// 保存 config.json
+// 保存 config.json（强制重新获取 SHA）
 async function saveConfig() {
   try {
     showLoading(true);
-    var data = await ghGetFile('config.json').catch(function(){ return {content:'', sha:null}; });
-    var contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify({family: family}, null, 2))));
-    await ghPutFile('config.json', contentBase64, 'update config.json', data.sha || undefined);
+    // 强制重新获取最新 SHA，避免 409
+    var data = await ghGetFile('config.json');
+    var jsonStr = JSON.stringify({family: family}, null, 2);
+    var contentBase64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    await ghPutFile('config.json', contentBase64, 'update config.json', data.sha);
+    console.log('[saveConfig] success');
     renderList();
     renderPersonStats();
+    alert('保存成功！');
   } catch(e) {
+    console.error('[saveConfig] error:', e);
     alert('保存失败：' + e.message);
   } finally {
     showLoading(false);
@@ -316,7 +359,13 @@ function saveToken() {
   BRANCH = document.getElementById('branchInput').value.trim() || 'main';
   localStorage.setItem('gh_token', TOKEN);
   localStorage.setItem('gh_branch', BRANCH);
-  if (TOKEN) { loadFamily(); loadPracticeData(); }
+  document.getElementById('tokenHint').innerText = '已保存，正在加载...';
+  if (TOKEN) {
+    loadFamily();
+    loadPracticeData();
+  } else {
+    document.getElementById('tokenHint').innerText = '未配置';
+  }
 }
 
 function showLoading(show) {
@@ -432,7 +481,6 @@ function renderPersonStats() {
     document.getElementById('personStats').innerHTML = html;
     return;
   }
-  // 从练习数据中统计每个人物正确率
   var stats = {};
   family.forEach(function(f){stats[f.name]={correct:0,total:0};});
   practiceData.forEach(function(s){
