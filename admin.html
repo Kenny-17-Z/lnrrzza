@@ -60,15 +60,21 @@
   .cover-badge { position: absolute; top: 5px; left: 5px; background: rgba(76,175,80,0.9); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
   .photo-actions { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 80%; text-align: center; }
   
-  .token-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .token-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .token-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .token-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px; }
   .eye-btn { cursor: pointer; font-size: 18px; padding: 5px; user-select: none; }
   .hint { font-size: 12px; color: #888; margin-top: 5px; }
+  .offline-hint { font-size: 13px; color: #FF9800; margin-top: 8px; padding: 8px; background: #fff3e0; border-radius: 6px; display: none; }
   
   button.primary { background: #4CAF50; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  button.secondary { background: #2196F3; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; }
   button { cursor: pointer; }
   .loading-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
   .no-data { color: #999; text-align: center; padding: 20px; font-size: 14px; }
+  
+  .export-box { margin-top: 10px; display: none; }
+  .export-box textarea { width: 100%; min-height: 120px; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+  .copy-btn { background: #2196F3; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; margin-top: 6px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -148,6 +154,18 @@
         <button class="primary" onclick="saveToken()">保存</button>
       </div>
       <div class="hint" id="tokenHint">未配置</div>
+      <div class="offline-hint" id="offlineHint">
+        ⚠️ 无法连接 GitHub API（网络限制）。你可以使用下方的"导出配置"功能，手动提交到仓库。
+      </div>
+      <div style="margin-top:10px;">
+        <button class="secondary" onclick="exportConfig()">📤 导出 config.json（手动提交）</button>
+      </div>
+      <div class="export-box" id="exportBox">
+        <p style="font-size:13px;color:#666;margin-bottom:4px;">复制下方内容，去 GitHub 网页粘贴到 config.json 提交：</p>
+        <textarea id="configOutput" readonly></textarea>
+        <button class="copy-btn" onclick="copyConfig()">📋 复制</button>
+        <span id="copyHint" style="margin-left:8px;color:#4CAF50;font-size:13px;"></span>
+      </div>
     </div>
 
     <div class="card">
@@ -207,6 +225,7 @@ var REPO = 'Kenny-17-Z/lnrrzza';
 var family = [];
 var practiceData = [];
 var currentPersonIdx = 0;
+var apiReachable = null; // null=未检测, true=通, false=不通
 
 console.log('[Init] TOKEN exists:', !!TOKEN, 'BRANCH:', BRANCH);
 
@@ -226,7 +245,7 @@ async function ghGetFile(path) {
   if (!res.ok) {
     var errText = await res.text();
     console.error('[GET] error:', errText);
-    throw new Error('获取 ' + path + ' 失败: ' + res.status + ' ' + errText);
+    throw new Error('获取 ' + path + ' 失败: ' + res.status);
   }
   return res.json();
 }
@@ -234,19 +253,14 @@ async function ghGetFile(path) {
 async function ghPutFile(path, contentBase64, message, sha) {
   var body = { message: message, content: contentBase64, branch: BRANCH };
   if (sha) body.sha = sha;
-  console.log('[PUT]', path, 'SHA:', sha ? sha.substring(0,8)+'...' : 'none');
   var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
     method: 'PUT',
     headers: ghHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
-  console.log('[PUT] status:', res.status, path);
   if (!res.ok) {
     var err = await res.json().catch(function(){ return {message:'未知错误'}; });
-    console.error('[PUT] error:', err);
-    // 409 = SHA冲突，自动重新获取再试一次
     if (res.status === 409 && sha) {
-      console.log('[PUT] 409 conflict, retrying...');
       var fresh = await ghGetFile(path);
       body.sha = fresh.sha;
       var res2 = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
@@ -254,10 +268,7 @@ async function ghPutFile(path, contentBase64, message, sha) {
         headers: ghHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
       });
-      if (!res2.ok) {
-        var err2 = await res2.json().catch(function(){ return {message:'重试也失败'}; });
-        throw new Error(err2.message || '写入失败(409重试)');
-      }
+      if (!res2.ok) throw new Error(err.message || '写入失败');
       return res2.json();
     }
     throw new Error(err.message || '写入失败: ' + res.status);
@@ -271,10 +282,7 @@ async function ghDeleteFile(path, sha, message) {
     headers: ghHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ message: message, sha: sha, branch: BRANCH })
   });
-  if (!res.ok) {
-    var err = await res.json().catch(function(){ return {message:'删除失败'}; });
-    throw new Error(err.message);
-  }
+  if (!res.ok) throw new Error('删除失败');
 }
 
 function fileToBase64(file) {
@@ -286,25 +294,56 @@ function fileToBase64(file) {
   });
 }
 
-// ==================== 加载 config.json 和 data.json ====================
-async function loadFamily() {
+// ==================== 检测 API 连通性 ====================
+async function checkApiReachable() {
+  if (!TOKEN) { apiReachable = false; return false; }
   try {
-    showLoading(true);
-    var data = await ghGetFile('config.json');
-    console.log('[loadFamily] raw content length:', data.content.length);
-    var content = JSON.parse(atob(data.content));
-    family = content.family || [];
-    renderList();
-    renderPersonStats();
-    document.getElementById('tokenHint').innerText = '已连接，共 ' + family.length + ' 个人物';
-    console.log('[loadFamily] success, family count:', family.length);
+    var res = await fetch('https://api.github.com/user', {
+      headers: { 'Authorization': 'token ' + TOKEN },
+      signal: AbortSignal.timeout(5000)
+    });
+    apiReachable = res.status !== 0;
   } catch(e) {
-    console.error('[loadFamily] error:', e);
-    alert('加载 config.json 失败：' + e.message);
-    document.getElementById('tokenHint').innerText = '加载失败：' + e.message;
-  } finally {
-    showLoading(false);
+    apiReachable = false;
   }
+  return apiReachable;
+}
+
+// ==================== 加载 config.json ====================
+async function loadFamily() {
+  // 先尝试从 GitHub API 加载
+  if (TOKEN) {
+    try {
+      showLoading(true);
+      var data = await ghGetFile('config.json');
+      var content = JSON.parse(atob(data.content));
+      family = content.family || [];
+      renderList();
+      renderPersonStats();
+      document.getElementById('tokenHint').innerText = '已连接，共 ' + family.length + ' 个人物';
+      document.getElementById('offlineHint').style.display = 'none';
+      apiReachable = true;
+      return;
+    } catch(e) {
+      console.warn('[loadFamily] API 失败，降级到静态读取:', e.message);
+      apiReachable = false;
+    }
+  }
+  // 降级：直接从同目录 fetch config.json（不跨域）
+  try {
+    var res = await fetch('config.json?t=' + Date.now());
+    if (res.ok) {
+      var content = await res.json();
+      family = content.family || [];
+      renderList();
+      renderPersonStats();
+    }
+  } catch(e) {
+    console.warn('[loadFamily] 静态读取也失败:', e.message);
+  }
+  document.getElementById('tokenHint').innerText = TOKEN ? 'Token 已配置（当前离线模式）' : '未配置';
+  document.getElementById('offlineHint').style.display = TOKEN ? 'block' : 'none';
+  showLoading(false);
 }
 
 async function loadPracticeData() {
@@ -313,31 +352,56 @@ async function loadPracticeData() {
     var content = JSON.parse(atob(data.content));
     practiceData = content.records || [];
   } catch(e) {
-    console.warn('[loadPracticeData] 无 data.json 或读取失败:', e.message);
-    practiceData = [];
+    // 降级读静态
+    try {
+      var res = await fetch('data.json?t=' + Date.now());
+      if (res.ok) { var c = await res.json(); practiceData = c.records || []; }
+    } catch(e2) { practiceData = []; }
   }
   renderCal(); renderTrend(); renderProgress(); renderConfusion(); renderRecords();
 }
 
-// 保存 config.json（强制重新获取 SHA）
+// 保存 config.json（带降级提示）
 async function saveConfig() {
+  if (apiReachable === false || !TOKEN) {
+    // 离线模式：提示导出
+    exportConfig();
+    alert('当前无法连接 GitHub API，已为你生成配置文件。请复制后手动提交到仓库。');
+    return;
+  }
   try {
     showLoading(true);
-    // 强制重新获取最新 SHA，避免 409
     var data = await ghGetFile('config.json');
     var jsonStr = JSON.stringify({family: family}, null, 2);
     var contentBase64 = btoa(unescape(encodeURIComponent(jsonStr)));
     await ghPutFile('config.json', contentBase64, 'update config.json', data.sha);
-    console.log('[saveConfig] success');
     renderList();
     renderPersonStats();
     alert('保存成功！');
   } catch(e) {
     console.error('[saveConfig] error:', e);
-    alert('保存失败：' + e.message);
+    apiReachable = false;
+    exportConfig();
+    alert('自动保存失败（网络不通），已为你生成配置文件。请复制后手动提交到仓库。');
   } finally {
     showLoading(false);
   }
+}
+
+// ==================== 导出配置（手动提交） ====================
+function exportConfig() {
+  var config = { family: family };
+  var text = JSON.stringify(config, null, 2);
+  document.getElementById('configOutput').value = text;
+  document.getElementById('exportBox').style.display = 'block';
+}
+
+function copyConfig() {
+  var ta = document.getElementById('configOutput');
+  ta.select();
+  document.execCommand('copy');
+  document.getElementById('copyHint').innerText = '✅ 已复制！';
+  setTimeout(function(){ document.getElementById('copyHint').innerText = ''; }, 2000);
 }
 
 // ==================== 标签页 ====================
@@ -359,12 +423,24 @@ function saveToken() {
   BRANCH = document.getElementById('branchInput').value.trim() || 'main';
   localStorage.setItem('gh_token', TOKEN);
   localStorage.setItem('gh_branch', BRANCH);
-  document.getElementById('tokenHint').innerText = '已保存，正在加载...';
+  document.getElementById('tokenHint').innerText = '已保存，正在检测连接...';
+  document.getElementById('exportBox').style.display = 'none';
   if (TOKEN) {
-    loadFamily();
-    loadPracticeData();
+    checkApiReachable().then(function(ok) {
+      if (ok) {
+        loadFamily();
+        loadPracticeData();
+      } else {
+        document.getElementById('tokenHint').innerText = 'Token 已保存（当前离线模式）';
+        document.getElementById('offlineHint').style.display = 'block';
+        // 降级读静态
+        loadFamily();
+        loadPracticeData();
+      }
+    });
   } else {
     document.getElementById('tokenHint').innerText = '未配置';
+    document.getElementById('offlineHint').style.display = 'none';
   }
 }
 
@@ -554,6 +630,14 @@ async function delPhoto(i) {
   if(!confirm('删除这张照片？')) return;
   var f = family[currentPersonIdx];
   var path = f.photos[i];
+  if (apiReachable === false || !TOKEN) {
+    // 离线模式：只从数组移除，提示导出
+    f.photos.splice(i,1);
+    if(f.cover>=f.photos.length) f.cover=0;
+    saveConfig();
+    openPerson(currentPersonIdx);
+    return;
+  }
   try {
     showLoading(true);
     var fileData = await ghGetFile(path).catch(function(){return null;});
@@ -594,6 +678,25 @@ async function addPerson() {
   var name = document.getElementById('newPersonName').value.trim();
   var files = document.getElementById('newPersonPhotos').files;
   if(!name){alert('请输入名字');return;}
+  
+  if (apiReachable === false || !TOKEN) {
+    // 离线模式：只存路径，照片需手动上传
+    var photos = [];
+    var folder = 'photos/' + name;
+    for (var i = 0; i < files.length; i++) {
+      photos.push(folder + '/' + files[i].name.replace(/\s/g,"_"));
+    }
+    family.push({name:name, folder:folder, photos:photos, cover:0});
+    saveConfig();
+    document.getElementById('newPersonName').value='';
+    document.getElementById('newPersonPhotos').value='';
+    closeModal('addPersonModal');
+    renderPersonStats();
+    renderList();
+    alert('已添加到本地列表。照片需手动上传到 GitHub 仓库对应目录，然后导出配置提交。');
+    return;
+  }
+  
   showLoading(true);
   try {
     var photos = [];
@@ -626,6 +729,19 @@ async function uploadPhotos() {
   var files = document.getElementById('addPhotoInput').files;
   if(!files.length){alert('请选择照片');return;}
   var p = family[currentPersonIdx];
+  
+  if (apiReachable === false || !TOKEN) {
+    for(var i=0; i<files.length; i++) {
+      p.photos.push(p.folder + '/' + files[i].name.replace(/\s/g,"_"));
+    }
+    saveConfig();
+    document.getElementById('addPhotoInput').value='';
+    closeModal('addPhotoModal');
+    openPerson(currentPersonIdx);
+    alert('照片路径已记录。请手动上传照片文件到 GitHub 仓库 ' + p.folder + '/ 目录，然后导出配置提交。');
+    return;
+  }
+  
   showLoading(true);
   try {
     for(var i=0; i<files.length; i++) {
@@ -653,11 +769,22 @@ function closeModal(id){document.getElementById(id).classList.remove('show');}
 document.getElementById('tokenInput').value = TOKEN;
 document.getElementById('branchInput').value = BRANCH;
 if(TOKEN) {
-  document.getElementById('tokenHint').innerText = '已配置，加载中...';
-  loadFamily();
-  loadPracticeData();
+  document.getElementById('tokenHint').innerText = '已配置，检测连接中...';
+  checkApiReachable().then(function(ok) {
+    if (ok) {
+      loadFamily();
+      loadPracticeData();
+    } else {
+      document.getElementById('tokenHint').innerText = 'Token 已配置（当前离线模式）';
+      document.getElementById('offlineHint').style.display = 'block';
+      loadFamily();
+      loadPracticeData();
+    }
+  });
 } else {
   document.getElementById('tokenHint').innerText = '未配置（请填入 GitHub Token 以同步数据）';
+  loadFamily();
+  loadPracticeData();
 }
 renderCal(); renderTrend(); renderProgress(); renderPersonStats(); renderConfusion(); renderRecords(); renderList();
 </script>
