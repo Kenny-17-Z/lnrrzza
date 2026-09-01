@@ -25,10 +25,59 @@
   <h1>认人练习</h1>
   <button onclick="start()">开始练习</button>
 </div>
+
+<!-- 隐藏的 GitHub 配置（老人端需要 Token 才能写 data.json） -->
+<div style="position:fixed;bottom:10px;left:10px;font-size:12px;color:#ccc;">
+  <span onclick="showConfig()" style="cursor:pointer;">⚙️</span>
+</div>
+<div id="configPanel" style="display:none;position:fixed;bottom:40px;left:10px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+  <input type="password" id="ghToken" placeholder="GitHub Token" style="width:150px;padding:5px;font-size:12px;"><br><br>
+  <button onclick="saveGhConfig()" style="font-size:14px;padding:5px 15px;">保存</button>
+</div>
+
 <script>
+var TOKEN = localStorage.getItem('gh_token') || '';
+var REPO = 'Kenny-17-Z/lnrrzza';
+var BRANCH = 'main';
 var family = [];
 var queue = [], wrongQueue = [], current = "", isRetry = false;
 var totalCorrect = 0, totalAnswered = 0;
+var sessionDetails = []; // 本次练习每题的详细记录
+
+function showConfig() {
+  document.getElementById('configPanel').style.display = document.getElementById('configPanel').style.display === 'none' ? 'block' : 'none';
+  document.getElementById('ghToken').value = TOKEN;
+}
+function saveGhConfig() {
+  TOKEN = document.getElementById('ghToken').value.trim();
+  localStorage.setItem('gh_token', TOKEN);
+  document.getElementById('configPanel').style.display = 'none';
+  alert('已保存');
+}
+
+function ghHeaders(extra) {
+  var h = { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' };
+  if (extra) Object.assign(h, extra);
+  return h;
+}
+
+async function ghGetFile(path) {
+  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path + '?ref=' + BRANCH, { headers: ghHeaders() });
+  if (!res.ok) throw new Error('获取失败: ' + res.status);
+  return res.json();
+}
+
+async function ghPutFile(path, contentBase64, message, sha) {
+  var body = { message: message, content: contentBase64, branch: BRANCH };
+  if (sha) body.sha = sha;
+  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+    method: 'PUT',
+    headers: ghHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { var err = await res.json(); throw new Error(err.message || '写入失败'); }
+  return res.json();
+}
 
 // 从 config.json 加载人物
 async function loadConfig() {
@@ -41,36 +90,36 @@ async function loadConfig() {
   }
 }
 
-// 从人物列表中随机抽一张照片作为题目，4个选项
-function generateQuestion() {
-  if(family.length < 2) {
-    document.getElementById("app").innerHTML = '<div class="loading">人物不足，请先在管理端添加至少2个人物</div>';
-    return null;
+// 上传练习记录到 data.json
+async function uploadPracticeRecord() {
+  if(!TOKEN) return; // 没配 Token 就不上传
+  try {
+    var today = new Date();
+    var pad = function(n){return String(n).padStart(2,'0');};
+    var dateStr = today.getFullYear() + '-' + pad(today.getMonth()+1) + '-' + pad(today.getDate());
+    
+    var dataFile;
+    try { dataFile = await ghGetFile('data.json'); }
+    catch(e) { dataFile = { content: btoa('{"records":[]}'), sha: null }; }
+    
+    var content = JSON.parse(atob(dataFile.content));
+    var records = content.records || [];
+    
+    // 同一天追加或更新
+    var existing = records.find(function(r){ return r.date === dateStr; });
+    if(existing) {
+      existing.correct += totalCorrect;
+      existing.total += totalAnswered;
+      existing.details = (existing.details || []).concat(sessionDetails);
+    } else {
+      records.push({ date: dateStr, correct: totalCorrect, total: totalAnswered, details: sessionDetails });
+    }
+    
+    var newContent = btoa(unescape(encodeURIComponent(JSON.stringify({records: records}, null, 2))));
+    await ghPutFile('data.json', newContent, 'practice record ' + dateStr, dataFile.sha || undefined);
+  } catch(e) {
+    console.log('上传记录失败:', e.message);
   }
-  // 随机选一个人物作为正确答案
-  var correctPerson = family[Math.floor(Math.random() * family.length)];
-  if(!correctPerson.photos || correctPerson.photos.length === 0) {
-    return null; // 这人没照片，跳过
-  }
-  // 随机选他的一张照片
-  var photo = correctPerson.photos[Math.floor(Math.random() * correctPerson.photos.length)];
-  
-  // 生成4个选项（1个正确 + 3个干扰）
-  var opts = [correctPerson.name];
-  var others = family.filter(function(p){ return p.name !== correctPerson.name; });
-  // 打乱其他人，取前3个
-  others.sort(function(){return Math.random()-0.5;});
-  for(var i=0; i<Math.min(3, others.length); i++) {
-    opts.push(others[i].name);
-  }
-  // 打乱选项顺序
-  opts.sort(function(){return Math.random()-0.5;});
-  
-  return {
-    correct: correctPerson.name,
-    photo: photo,
-    options: opts
-  };
 }
 
 async function start(){
@@ -82,12 +131,9 @@ async function start(){
     return;
   }
   
-  // 为每个人物至少出一道题，题目数量 = 人物数（每人随机抽一张照片）
   queue = [];
   family.forEach(function(p){
-    if(p.photos && p.photos.length > 0) {
-      queue.push(p.name);
-    }
+    if(p.photos && p.photos.length > 0) queue.push(p.name);
   });
   queue.sort(function(){return Math.random()-0.5;});
   
@@ -95,6 +141,7 @@ async function start(){
   isRetry = false;
   totalCorrect = 0;
   totalAnswered = 0;
+  sessionDetails = [];
   
   document.getElementById("app").innerHTML = `
     <h1>请看图</h1>
@@ -115,7 +162,7 @@ function next(){
     isRetry = true;
     queue = [...wrongQueue].sort(function(){return Math.random()-0.5;});
     wrongQueue = [];
-    document.getElementById("progress").innerText = "第一轮结束，开始错题重考！";
+    document.getElementById("progress").innerText = "错题重考！";
     setTimeout(next, 1000);
     return;
   }
@@ -126,23 +173,17 @@ function next(){
   
   var personName = queue.shift();
   var person = family.find(function(p){return p.name === personName;});
-  if(!person || !person.photos || person.photos.length === 0) {
-    next(); // 跳过没照片的
-    return;
-  }
+  if(!person || !person.photos || person.photos.length === 0) { next(); return; }
   var photo = person.photos[Math.floor(Math.random() * person.photos.length)];
   current = person.name;
   
   document.getElementById("q").src = photo;
   document.getElementById("progress").innerText = isRetry ? '错题重考（剩'+queue.length+'题）' : '第'+(totalAnswered+1)+'题（剩'+queue.length+'题）';
   
-  // 生成选项
   var opts = [current];
   var others = family.filter(function(p){ return p.name !== current; });
   others.sort(function(){return Math.random()-0.5;});
-  for(var i=0; i<Math.min(3, others.length); i++) {
-    opts.push(others[i].name);
-  }
+  for(var i=0; i<Math.min(3, others.length); i++) opts.push(others[i].name);
   opts.sort(function(){return Math.random()-0.5;});
   
   document.getElementById("opts").innerHTML = opts.map(function(n){ return '<button class="opt" onclick="ans(\''+n+'\')">'+n+'</button>'; }).join('');
@@ -153,7 +194,10 @@ function ans(a){
   totalAnswered++;
   document.querySelectorAll('.opt').forEach(function(b){ b.disabled = true; });
   
-  if(a === current){
+  var isCorrect = (a === current);
+  sessionDetails.push({ name: current, answer: a, correct: isCorrect });
+  
+  if(isCorrect){
     totalCorrect++;
     document.getElementById("result").innerText = "✅ 对！";
     confetti({ particleCount: 50, spread: 60, origin: { x: 0.8, y: 0.5 }, colors: ['#4CAF50','#FFEB3B'] });
@@ -165,6 +209,8 @@ function ans(a){
 }
 
 function showSummary(perfect){
+  uploadPracticeRecord(); // 练习结束自动上传
+  
   var html = '<h1>练习结束</h1>';
   if(perfect) {
     html += '<div class="celebrate">🎉 太棒了！全部正确！ 🎉</div>';
