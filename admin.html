@@ -20,7 +20,6 @@
   * { box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 0; }
 
-  /* 顶部标题栏 */
   .top {
     display: flex;
     align-items: center;
@@ -30,7 +29,6 @@
   }
   .top h1 { color: var(--main); margin: 0; font-size: 22px; }
 
-  /* Token 固定在管理端下方 */
   .token-fixed {
     position: absolute;
     top: 100%;
@@ -74,19 +72,16 @@
   }
   .token-fixed button:hover { background: var(--hover); }
 
-  /* 主体内容（预留 Token 高度） */
   .main-content {
     padding: 60px 20px 20px 20px;
   }
 
   h2 { color: var(--main); margin-top: 0; font-size: 18px; }
 
-  /* Tabs */
   .tabs { margin-bottom: 20px; }
   .tab { display: inline-block; padding: 8px 16px; cursor: pointer; background: var(--light); color: var(--dark); border-radius: 4px 4px 0 0; margin-right: 4px; font-size: 14px; }
   .tab.active { background: var(--main); color: #fff; }
 
-  /* Card */
   .card {
     background: var(--card-bg);
     border-radius: 12px;
@@ -96,7 +91,6 @@
     box-sizing: border-box;
   }
 
-  /* Calendar */
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .cal-header strong { color: var(--main); font-size: 16px; }
   .cal-header button { background: var(--main); color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 4px; }
@@ -121,7 +115,6 @@
   .cal-days > div.active { background: var(--main); color: #fff; font-weight: bold; }
   .cal-days > div.empty { background: transparent; }
 
-  /* Trend canvas */
   #trendCanvas {
     width: 100% !important;
     height: 200px;
@@ -131,7 +124,6 @@
     box-sizing: border-box;
   }
 
-  /* Person stats row */
   .person-stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
   .person-stat-card { background: var(--ultra-light); border-radius: 6px; padding: 10px 14px; cursor: pointer; min-width: 120px; text-align: center; transition: background 0.2s; }
   .person-stat-card:hover { background: var(--light); }
@@ -139,7 +131,6 @@
   .person-stat-card .pname { font-weight: bold; font-size: 14px; }
   .person-stat-card .pacc { font-size: 18px; margin-top: 4px; }
 
-  /* Person expand panel */
   .person-expand-panel { margin-top: 12px; padding: 16px; background: var(--ultra-light); border-radius: 6px; display: none; }
   .person-expand-panel.open { display: block; }
   .person-expand-panel h3 { color: var(--main); margin-top: 0; font-size: 16px; }
@@ -147,16 +138,13 @@
   .expand-row strong { color: var(--main); }
   .expand-toggle { cursor: pointer; color: var(--main); text-decoration: underline; font-size: 13px; margin-left: 8px; }
 
-  /* Bar */
   .bar { background: var(--ultra-light); height: 16px; border-radius: 8px; overflow: hidden; margin-bottom: 6px; display: inline-block; vertical-align: middle; }
   .bar-fill { background: var(--main); height: 100%; color: #fff; font-size: 12px; text-align: right; padding-right: 6px; box-sizing: border-box; }
 
-  /* Table */
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   th, td { border: 1px solid var(--light); padding: 6px; text-align: center; }
   th { background: var(--ultra-light); color: var(--main); }
 
-  /* Buttons & inputs */
   button { background: var(--main); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
   button:hover { background: var(--hover); }
   button.danger { background: var(--danger); }
@@ -164,7 +152,6 @@
   input, select, textarea { border: 1px solid var(--light); padding: 6px; border-radius: 4px; color: var(--dark); }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--main); }
 
-  /* Person cards (management tab) */
   .person-card { display: inline-block; margin: 10px; text-align: center; cursor: pointer; vertical-align: top; }
   .person-card img { width: 100px; height: 100px; object-fit: cover; border-radius: 4px; }
   .person-card.default img { box-shadow: 0 0 0 2px var(--light); }
@@ -180,14 +167,12 @@
   .error { color: var(--danger); }
   .empty { color: var(--text); }
 
-  /* Error display with bilingual */
   .err-en { font-size: 12px; color: #999; margin-top: 2px; }
   .err-zh { font-size: 13px; font-weight: bold; }
 </style>
 </head>
 <body>
 
-<!-- 顶部标题 + Token -->
 <div class="top">
   <h1>管理端</h1>
   <div class="token-fixed">
@@ -197,7 +182,6 @@
   </div>
 </div>
 
-<!-- 主体内容 -->
 <div class="main-content">
 
 <div class="tabs">
@@ -300,9 +284,8 @@
   <div id="clearResult"></div>
 </div>
 
-</div><!-- /main-content -->
+</div>
 
-<!-- 浮窗 -->
 <div class="modal-mask" id="modalMask">
   <div class="modal">
     <span class="modal-close" onclick="closeModal()">×</span>
@@ -311,7 +294,7 @@
 </div>
 
 <script>
-const REPO='lnrrzza/lnrrzza';
+const REPO='Kenny-17-Z/lnrrzza';
 let TOKEN=localStorage.getItem('gh_token')||'';
 let CONFIG={persons:[]};
 let RECORDS=[];
@@ -326,17 +309,57 @@ function showTab(t){
 document.getElementById('token').value=TOKEN;
 function saveToken(){ TOKEN=document.getElementById('token').value.trim(); localStorage.setItem('gh_token',TOKEN); alert('已保存'); }
 
-// ================= GitHub API =================
+// ================= GitHub API（修复版，只声明一次） =================
 async function gh(path,opts={}){
   const headers={'Accept':'application/vnd.github.v3+json'};
   if(TOKEN) headers['Authorization']='token '+TOKEN;
   if(opts.body) headers['Content-Type']='application/json';
-  const r=await fetch('https://api.github.com/repos/'+REPO+'/contents/'+path,headers,opts);
-  return r.json();
+  const res=await fetch('https://api.github.com/repos/'+REPO+'/contents/'+path,{
+    ...opts,
+    headers: {...headers, ...(opts.headers||{})}
+  });
+  const data=await res.json();
+  if(!res.ok){
+    throw new Error(`GitHub API ${res.status}: ${data.message||'Unknown error'}`);
+  }
+  return data;
 }
-async function loadConfig(){ try{ const d=await gh('config.json'); CONFIG=d.content?JSON.parse(atob(d.content)):{persons:[]}; }catch(e){CONFIG={persons:[]};} }
-async function saveConfig(){ const d=await gh('config.json'); await gh('config.json',{method:'PUT',body:JSON.stringify({message:'update config',content:btoa(JSON.stringify(CONFIG,null,2)),sha:d.sha})}); }
-async function loadData(){ try{ const d=await gh('data.json'); RECORDS=d.content?JSON.parse(atob(d.content)):[]; }catch(e){RECORDS=[];} }
+
+async function loadConfig(){
+  try{ 
+    const d=await gh('config.json'); 
+    CONFIG=d.content?JSON.parse(atob(d.content)):{persons:[]}; 
+  }catch(e){ 
+    console.error('加载配置失败:',e);
+    CONFIG={persons:[]};
+  } 
+}
+
+async function saveConfig(){ 
+  try{
+    const d=await gh('config.json'); 
+    await gh('config.json',{
+      method:'PUT',
+      body:JSON.stringify({
+        message:'update config',
+        content:btoa(JSON.stringify(CONFIG,null,2)),
+        sha:d.sha
+      })
+    });
+  }catch(e){
+    alert('保存配置失败：'+e.message);
+  }
+}
+
+async function loadData(){ 
+  try{ 
+    const d=await gh('data.json'); 
+    RECORDS=d.content?JSON.parse(atob(d.content)):[]; 
+  }catch(e){
+    console.error('加载数据失败:',e);
+    RECORDS=[];
+  } 
+}
 
 // ================= 人物渲染 & 浮窗 =================
 function renderPersons(){
@@ -437,7 +460,6 @@ function renderAnalysis(){
   renderRecords();
 }
 
-// --- Calendar ---
 function renderCalendar(){
   const daysEl=document.getElementById('calDays');
   const titleEl=document.getElementById('calTitle');
@@ -483,7 +505,6 @@ function toggleCal(){
 function prevMonth(){ calViewMonth--; if(calViewMonth<0){calViewMonth=11;calViewYear--;} renderCalendar(); }
 function nextMonth(){ calViewMonth++; if(calViewMonth>11){calViewMonth=0;calViewYear++;} renderCalendar(); }
 
-// --- Trend (动态宽度) ---
 function drawTrend(){
   const canvas=document.getElementById('trendCanvas');
   const parent=canvas.parentElement;
@@ -510,7 +531,6 @@ function drawTrend(){
   });
 }
 
-// --- Progress ---
 function toggleCompareDate(){
   const mode=document.getElementById('compareMode').value;
   document.getElementById('compareDate').style.display=mode==='specific'?'inline':'none';
@@ -547,7 +567,6 @@ function renderProgress(){
     <div style="margin-top:6px">进步：<b style="color:${diff>=0?'var(--main)':'var(--danger)'}">${diff>=0?'+':''}${diff}%</b></div>`;
 }
 
-// --- Person Stats ---
 let expandedPerson=null;
 let personTrendRange=7;
 
@@ -648,7 +667,6 @@ function drawPersonTrend(name){
   });
 }
 
-// --- Confusion ---
 function renderConfusion(){
   const confusion={};
   RECORDS.forEach(r=>{ (r.details||[]).forEach(d=>{ if(!d.correct&&d.expected) confusion[d.expected]=(confusion[d.expected]||0)+1; }); });
@@ -657,13 +675,12 @@ function renderConfusion(){
   document.getElementById('confusion').innerHTML=sorted.length?sorted.map(([n,c])=>`<div><span style="display:inline-block;width:60px;color:var(--text)">${n}</span><div class="bar" style="width:60%"><div class="bar-fill" style="width:${c/max*100}%">${c}</div></div></div>`).join(''):'<p class="empty">暂无混淆</p>';
 }
 
-// --- Records ---
 function renderRecords(){
   const sorted=[...RECORDS].sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('records').innerHTML=sorted.map(r=>`<tr><td>${r.date.slice(5)}</td><td>${r.correct}</td><td>${r.total}</td><td>${Math.round(r.correct/r.total*100)}%</td></tr>`).join('');
 }
 
-// ================= 数据上传（修复版） =================
+// ================= 数据上传 =================
 function uploadData(){
   const input=document.getElementById('uploadFile');
   if(!input.files.length){ document.getElementById('uploadResult').innerHTML='<span class="error">请选择文件</span>'; return; }
@@ -771,10 +788,8 @@ async function clearAllData(){
   }
 }
 
-// 窗口变化时重绘趋势图
 window.addEventListener('resize', () => { if(document.getElementById('trendCanvas')) drawTrend(); });
 
-// 初始化
 showTab('analysis');
 loadConfig().then(renderPersons);
 loadData().then(renderAnalysis);
