@@ -1,228 +1,272 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>认人练习</title>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
-  body{font-family:sans-serif;text-align:center;background:#fff;margin:0;padding:20px;}
-  h1{font-size:32px;margin:40px 0;}
-  button{font-size:28px;padding:15px 40px;margin:10px;border-radius:12px;border:none;background:#4CAF50;color:#fff;cursor:pointer;}
-  img#q{width:240px;height:240px;object-fit:cover;margin:20px auto;display:block;border:4px solid #f44336;border-radius:12px;}
-  .options{display:flex;flex-wrap:wrap;justify-content:center;}
-  .opt{font-size:36px;padding:20px 30px;margin:10px;background:#2196F3;color:#fff;border-radius:12px;border:none;cursor:pointer;}
-  .opt:disabled{opacity:0.6;cursor:not-allowed;}
-  #result{font-size:32px;margin-top:20px;min-height:40px;}
-  #progress{font-size:20px;color:#666;margin-bottom:20px;}
-  .summary{font-size:24px;margin:20px;}
-  .celebrate{color:#E91E63;font-weight:bold;font-size:36px;margin:20px;}
-  .loading{font-size:24px;color:#666;margin-top:60px;}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 15px; }
+h1 { color: #2196F3; margin-bottom: 10px; font-size: 24px; }
+#gameArea { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); max-width: 500px; width: 100%; text-align: center; }
+.photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+.photo-cell { border: 3px solid #e0e0e0; border-radius: 8px; overflow: hidden; cursor: pointer; transition: border-color 0.2s; aspect-ratio: 1; }
+.photo-cell:hover { border-color: #2196F3; }
+.photo-cell.correct { border-color: #4CAF50; }
+.photo-cell.wrong { border-color: #f44336; }
+.photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0; }
+.option-btn { padding: 10px 18px; border: 2px solid #2196F3; border-radius: 8px; background: white; color: #2196F3; font-size: 16px; cursor: pointer; }
+.option-btn:hover { background: #2196F3; color: white; }
+.option-btn.correct { background: #4CAF50; border-color: #4CAF50; color: white; }
+.option-btn.wrong { background: #f44336; border-color: #f44336; color: white; }
+.option-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+#status { margin: 10px 0; font-size: 16px; color: #666; }
+#startBtn { padding: 12px 30px; font-size: 18px; border: none; border-radius: 8px; background: #2196F3; color: white; cursor: pointer; margin-top: 10px; }
+#startBtn:hover { background: #1976D2; }
+.loading { color: #999; font-size: 14px; margin: 20px 0; }
+.error { color: #f44336; font-size: 14px; margin: 20px 0; }
 </style>
 </head>
 <body>
-<div id="app">
-  <h1>认人练习</h1>
-  <button onclick="start()">开始练习</button>
-</div>
-
-<!-- 隐藏的 GitHub 配置（老人端需要 Token 才能写 data.json） -->
-<div style="position:fixed;bottom:10px;left:10px;font-size:12px;color:#ccc;">
-  <span onclick="showConfig()" style="cursor:pointer;">⚙️</span>
-</div>
-<div id="configPanel" style="display:none;position:fixed;bottom:40px;left:10px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
-  <input type="password" id="ghToken" placeholder="GitHub Token" style="width:150px;padding:5px;font-size:12px;"><br><br>
-  <button onclick="saveGhConfig()" style="font-size:14px;padding:5px 15px;">保存</button>
+<h1>👴 认人练习</h1>
+<div id="gameArea">
+  <div id="status">正在加载人物数据...</div>
+  <div class="photo-grid" id="photoGrid" style="display:none;"></div>
+  <div class="options" id="options" style="display:none;"></div>
+  <button id="startBtn" onclick="startGame()" style="display:none;">开始练习</button>
 </div>
 
 <script>
-var TOKEN = localStorage.getItem('gh_token') || '';
-var REPO = 'Kenny-17-Z/lnrrzza';
-var BRANCH = 'main';
-var family = [];
-var queue = [], wrongQueue = [], current = "", isRetry = false;
-var totalCorrect = 0, totalAnswered = 0;
-var sessionDetails = []; // 本次练习每题的详细记录
+// ================= 配置 =================
+const REPO_OWNER = 'Kenny-17-Z';
+const REPO_NAME  = 'lnrrzza';
+const BRANCH     = 'main';
+const CONFIG_FILE = 'config.json';
+const DATA_FILE  = 'data.json';
 
-function showConfig() {
-  document.getElementById('configPanel').style.display = document.getElementById('configPanel').style.display === 'none' ? 'block' : 'none';
-  document.getElementById('ghToken').value = TOKEN;
-}
-function saveGhConfig() {
-  TOKEN = document.getElementById('ghToken').value.trim();
-  localStorage.setItem('gh_token', TOKEN);
-  document.getElementById('configPanel').style.display = 'none';
-  alert('已保存');
-}
+let configData = null;       // 从仓库拉取的 config.json
+let currentQuestion = null;  // 当前题目
+let score = 0;
+let totalQuestions = 0;
+const QUESTIONS_PER_ROUND = 6;
 
-function ghHeaders(extra) {
-  var h = { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' };
-  if (extra) Object.assign(h, extra);
-  return h;
+// ================= Token =================
+function getToken() {
+  return localStorage.getItem('ghToken');
 }
 
-async function ghGetFile(path) {
-  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path + '?ref=' + BRANCH, { headers: ghHeaders() });
-  if (!res.ok) throw new Error('获取失败: ' + res.status);
+// ================= GitHub API =================
+async function ghGet(path) {
+  const token = getToken();
+  const headers = token ? { 'Authorization': `token ${token}` } : {};
+  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`, { headers });
+  if (!res.ok) throw new Error(`GET ${path}: ${res.status}`);
   return res.json();
 }
 
-async function ghPutFile(path, contentBase64, message, sha) {
-  var body = { message: message, content: contentBase64, branch: BRANCH };
+async function ghPut(path, contentB64, sha, message) {
+  const token = getToken();
+  if (!token) throw new Error('未配置 Token');
+  const body = { message, content: contentB64, branch: BRANCH };
   if (sha) body.sha = sha;
-  var res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
     method: 'PUT',
-    headers: ghHeaders({ 'Content-Type': 'application/json' }),
+    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) { var err = await res.json(); throw new Error(err.message || '写入失败'); }
+  if (!res.ok) { const j = await res.json(); throw new Error(`PUT ${path}: ${j.message}`); }
   return res.json();
 }
 
-// 从 config.json 加载人物
+function base64ToText(b64) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+// ================= 加载配置 =================
 async function loadConfig() {
+  const status = document.getElementById('status');
   try {
-    var res = await fetch('config.json?t=' + Date.now());
-    var data = await res.json();
-    family = data.family || [];
-  } catch(e) {
-    document.getElementById("app").innerHTML = '<div class="loading">加载失败，请刷新重试</div>';
+    const file = await ghGet(CONFIG_FILE);
+    configData = JSON.parse(base64ToText(file.content));
+    status.innerText = `已加载 ${configData.photos ? configData.photos.length : 0} 张照片，点击开始练习`;
+    document.getElementById('startBtn').style.display = 'inline-block';
+  } catch (e) {
+    status.innerHTML = `<span class="error">加载失败: ${e.message}<br>请确认已在管理端配置 Token</span>`;
   }
 }
 
-// 上传练习记录到 data.json
-async function uploadPracticeRecord() {
-  if(!TOKEN) return; // 没配 Token 就不上传
-  try {
-    var today = new Date();
-    var pad = function(n){return String(n).padStart(2,'0');};
-    var dateStr = today.getFullYear() + '-' + pad(today.getMonth()+1) + '-' + pad(today.getDate());
-    
-    var dataFile;
-    try { dataFile = await ghGetFile('data.json'); }
-    catch(e) { dataFile = { content: btoa('{"records":[]}'), sha: null }; }
-    
-    var content = JSON.parse(atob(dataFile.content));
-    var records = content.records || [];
-    
-    // 同一天追加或更新
-    var existing = records.find(function(r){ return r.date === dateStr; });
-    if(existing) {
-      existing.correct += totalCorrect;
-      existing.total += totalAnswered;
-      existing.details = (existing.details || []).concat(sessionDetails);
-    } else {
-      records.push({ date: dateStr, correct: totalCorrect, total: totalAnswered, details: sessionDetails });
-    }
-    
-    var newContent = btoa(unescape(encodeURIComponent(JSON.stringify({records: records}, null, 2))));
-    await ghPutFile('data.json', newContent, 'practice record ' + dateStr, dataFile.sha || undefined);
-  } catch(e) {
-    console.log('上传记录失败:', e.message);
-  }
+// ================= 获取图片 data URL =================
+async function getImageDataUrl(path) {
+  const token = getToken();
+  const headers = token ? { 'Authorization': `token ${token}` } : {};
+  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`, { headers });
+  if (!res.ok) throw new Error(`加载图片失败: ${path}`);
+  const data = await res.json();
+  return `data:image/${getExt(path)};base64,${data.content}`;
 }
 
-async function start(){
-  document.getElementById("app").innerHTML = '<div class="loading">加载中...</div>';
-  await loadConfig();
-  
-  if(family.length < 2) {
-    document.getElementById("app").innerHTML = '<div class="loading">人物不足，请先在管理端添加至少2个人物</div>';
-    return;
-  }
-  
-  queue = [];
-  family.forEach(function(p){
-    if(p.photos && p.photos.length > 0) queue.push(p.name);
+function getExt(path) {
+  const e = path.split('.').pop().toLowerCase();
+  return e === 'jpg' || e === 'jpeg' ? 'jpeg' : e === 'png' ? 'png' : 'jpeg';
+}
+
+// ================= 游戏逻辑 =================
+function getUniquePersons() {
+  if (!configData || !configData.photos) return [];
+  const map = {};
+  configData.photos.forEach(p => {
+    if (!map[p.name]) map[p.name] = [];
+    map[p.name].push(p);
   });
-  queue.sort(function(){return Math.random()-0.5;});
-  
-  wrongQueue = [];
-  isRetry = false;
-  totalCorrect = 0;
-  totalAnswered = 0;
-  sessionDetails = [];
-  
-  document.getElementById("app").innerHTML = `
-    <h1>请看图</h1>
-    <div id="progress"></div>
-    <img id="q" src="" alt="题目">
-    <div class="options" id="opts"></div>
-    <div id="result"></div>
-  `;
-  next();
+  return Object.keys(map).map(name => ({ name, photos: map[name] }));
 }
 
-function next(){
-  if(queue.length === 0 && !isRetry){
-    if(wrongQueue.length === 0){
-      showSummary(true);
-      return;
-    }
-    isRetry = true;
-    queue = [...wrongQueue].sort(function(){return Math.random()-0.5;});
-    wrongQueue = [];
-    document.getElementById("progress").innerText = "错题重考！";
-    setTimeout(next, 1000);
+function pickRandom(arr, n) {
+  const a = [...arr];
+  const res = [];
+  for (let i = 0; i < Math.min(n, a.length); i++) {
+    const idx = Math.floor(Math.random() * a.length);
+    res.push(a[idx]);
+    a.splice(idx, 1);
+  }
+  return res;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+async function startGame() {
+  const persons = getUniquePersons();
+  if (persons.length < 2) {
+    alert('至少需要2个人物才能开始练习');
     return;
   }
-  if(queue.length === 0){
-    showSummary(wrongQueue.length === 0);
+
+  score = 0;
+  totalQuestions = 0;
+  document.getElementById('startBtn').style.display = 'none';
+  await nextQuestion();
+}
+
+async function nextQuestion() {
+  const status = document.getElementById('status');
+  const grid = document.getElementById('photoGrid');
+  const optionsDiv = document.getElementById('options');
+
+  if (totalQuestions >= QUESTIONS_PER_ROUND) {
+    status.innerText = `练习完成！得分 ${score}/${QUESTIONS_PER_ROUND}`;
+    grid.style.display = 'none';
+    optionsDiv.style.display = 'none';
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('startBtn').innerText = '再来一次';
+    // 自动上传记录
+    await uploadRecord();
     return;
   }
-  
-  var personName = queue.shift();
-  var person = family.find(function(p){return p.name === personName;});
-  if(!person || !person.photos || person.photos.length === 0) { next(); return; }
-  var photo = person.photos[Math.floor(Math.random() * person.photos.length)];
-  current = person.name;
-  
-  document.getElementById("q").src = photo;
-  document.getElementById("progress").innerText = isRetry ? '错题重考（剩'+queue.length+'题）' : '第'+(totalAnswered+1)+'题（剩'+queue.length+'题）';
-  
-  var opts = [current];
-  var others = family.filter(function(p){ return p.name !== current; });
-  others.sort(function(){return Math.random()-0.5;});
-  for(var i=0; i<Math.min(3, others.length); i++) opts.push(others[i].name);
-  opts.sort(function(){return Math.random()-0.5;});
-  
-  document.getElementById("opts").innerHTML = opts.map(function(n){ return '<button class="opt" onclick="ans(\''+n+'\')">'+n+'</button>'; }).join('');
-  document.getElementById("result").innerText = "";
+
+  const persons = getUniquePersons();
+  const correctPerson = persons[Math.floor(Math.random() * persons.length)];
+  const wrongPersons = pickRandom(persons.filter(p => p.name !== correctPerson.name), 3);
+  const allOptions = shuffle([correctPerson, ...wrongPersons]);
+
+  status.innerText = `第 ${totalQuestions + 1}/${QUESTIONS_PER_ROUND} 题 — 请找出：${correctPerson.name}`;
+  grid.innerHTML = '<div class="loading">加载图片中...</div>';
+  grid.style.display = 'grid';
+  optionsDiv.style.display = 'none';
+
+  // 从正确人物的照片池中随机选一张
+  const photo = correctPerson.photos[Math.floor(Math.random() * correctPerson.photos.length)];
+
+  try {
+    const imgUrl = await getImageDataUrl(photo.url);
+    grid.innerHTML = `<div class="photo-cell"><img src="${imgUrl}" alt="${correctPerson.name}"></div>`;
+  } catch(e) {
+    grid.innerHTML = `<div class="error">图片加载失败</div>`;
+    return;
+  }
+
+  // 生成选项按钮
+  optionsDiv.innerHTML = '';
+  allOptions.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerText = opt.name;
+    btn.onclick = () => handleAnswer(opt.name, correctPerson.name, btn, allOptions.map(o => o.name));
+    optionsDiv.appendChild(btn);
+  });
+  optionsDiv.style.display = 'flex';
 }
 
-function ans(a){
-  totalAnswered++;
-  document.querySelectorAll('.opt').forEach(function(b){ b.disabled = true; });
-  
-  var isCorrect = (a === current);
-  sessionDetails.push({ name: current, answer: a, correct: isCorrect });
-  
-  if(isCorrect){
-    totalCorrect++;
-    document.getElementById("result").innerText = "✅ 对！";
-    confetti({ particleCount: 50, spread: 60, origin: { x: 0.8, y: 0.5 }, colors: ['#4CAF50','#FFEB3B'] });
+function handleAnswer(selected, correct, btn, allNames) {
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  totalQuestions++;
+  currentQuestion = { name: correct, selected, correct: selected === correct };
+
+  if (selected === correct) {
+    btn.classList.add('correct');
+    score++;
   } else {
-    document.getElementById("result").innerText = '❌ 错，是【'+current+'】';
-    wrongQueue.push(current);
+    btn.classList.add('wrong');
+    buttons.forEach(b => {
+      if (b.innerText === correct) b.classList.add('correct');
+    });
   }
-  setTimeout(next, 1200);
+
+  setTimeout(() => nextQuestion(), 1200);
 }
 
-function showSummary(perfect){
-  uploadPracticeRecord(); // 练习结束自动上传
-  
-  var html = '<h1>练习结束</h1>';
-  if(perfect) {
-    html += '<div class="celebrate">🎉 太棒了！全部正确！ 🎉</div>';
-    confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
-    setTimeout(function(){ confetti({ particleCount: 150, angle: 60, spread: 80, origin: { x: 0 } }); }, 300);
-    setTimeout(function(){ confetti({ particleCount: 150, angle: 120, spread: 80, origin: { x: 1 } }); }, 600);
-  } else {
-    html += '<div class="celebrate" style="color:#f44336">继续加油哦！</div>';
+// ================= 上传记录 =================
+async function uploadRecord() {
+  const token = getToken();
+  if (!token) return; // 无 Token 不上传
+
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+
+  // 读取当前 data.json
+  let sha = null;
+  let records = [];
+  try {
+    const file = await ghGet(DATA_FILE);
+    sha = file.sha;
+    records = JSON.parse(base64ToText(file.content));
+    if (!Array.isArray(records)) records = records.records || [];
+  } catch(e) {
+    // 文件不存在，从头开始
   }
-  html += '<div class="summary"><p>总题数：'+totalAnswered+'</p><p>正确：'+totalCorrect+'</p><p>正确率：'+(totalAnswered?Math.round(totalCorrect/totalAnswered*100):0)+'%</p></div><button onclick="start()">再练一次</button>';
-  document.getElementById("app").innerHTML = html;
+
+  // 计算当天已有几条记录
+  const todayCount = records.filter(r => r.date === dateStr).length + 1;
+
+  const newRecord = {
+    date: dateStr,
+    count: todayCount,
+    total: QUESTIONS_PER_ROUND,
+    correct: score,
+    details: currentQuestion ? [currentQuestion] : []
+  };
+
+  records.push(newRecord);
+
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(records, null, 2))));
+  try {
+    await ghPut(DATA_FILE, b64, sha, `add record ${dateStr} #${todayCount}`);
+    document.getElementById('status').innerText += ' ✅ 记录已保存';
+  } catch(e) {
+    document.getElementById('status').innerText += ' ⚠️ 保存失败';
+  }
 }
+
+// ================= 初始化 =================
+loadConfig();
 </script>
 </body>
 </html>
