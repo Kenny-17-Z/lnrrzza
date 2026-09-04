@@ -2,163 +2,543 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fff9e6">
 <title>认人练习</title>
 <style>
-  :root{ --main:#d48806; --light:#fff7e6; --bg:#fff1b8; --card:#fff; --text:#874d00; --danger:#cf1322; --success:#52c41a; }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); padding:16px; font-size:18px;}
-  h1{text-align:center; margin-bottom:20px; color:var(--main); font-size:26px;}
-  .panel{background:var(--card); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 12px rgba(212,136,6,.15); border:2px solid var(--light);}
+  :root{
+    --bg:#fff9e6; --main:#d48806; --main-dark:#874d00;
+    --card:#ffffff; --border:#ffd666; --text:#5d4037;
+    --danger:#cf1322; --success:#2e9b12;
+    --fs-body:20px;
+    --fs-question:38px;
+    --fs-option:32px;
+    --fs-btn:26px;
+    --opt-h:96px;
+    --photo:240px;
+  }
+  body.big-font{
+    --fs-body:24px;
+    --fs-question:48px;
+    --fs-option:40px;
+    --fs-btn:32px;
+    --opt-h:120px;
+    --photo:280px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Heiti SC",sans-serif;
+    background:var(--bg); color:var(--text);
+    font-size:var(--fs-body); line-height:1.6;
+    padding:16px 16px calc(24px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust:100%;
+  }
+  .container{max-width:640px; margin:0 auto;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0 12px;}
+  h1{font-size:calc(var(--fs-btn) + 4px); color:var(--main-dark); letter-spacing:2px; flex:1; text-align:center;}
+  .icon-btn{
+    width:56px; height:56px; flex:0 0 56px; font-size:26px;
+    background:#fff; border:2px solid var(--main); border-radius:50%;
+    color:var(--main-dark); cursor:pointer;
+  }
+  .icon-btn:active{background:var(--border);}
+
+  .card{
+    background:var(--card); border-radius:20px; padding:20px; margin-bottom:16px;
+    box-shadow:0 4px 14px rgba(212,136,6,.18); border:3px solid var(--border);
+  }
+
+  .btn{
+    display:block; width:100%; padding:22px 16px; margin:12px 0;
+    background:var(--main); color:#fff; border:none; border-radius:16px;
+    font-size:var(--fs-btn); font-weight:bold; line-height:1.4;
+    cursor:pointer; touch-action:manipulation; min-height:72px;
+  }
+  .btn:active{background:var(--main-dark); transform:scale(.98);}
+  .btn-secondary{background:#fff; color:var(--main-dark); border:3px solid var(--main);}
+  .btn-ghost{background:#fff7e6; color:var(--main-dark); border:3px dashed var(--main);}
+  .btn:disabled{opacity:.5;}
+
+  .photo-box{text-align:center; margin:8px 0 4px;}
+  .photo-box img{
+    width:var(--photo); height:var(--photo); object-fit:cover;
+    border-radius:50%; border:6px solid var(--border); background:#fff7e6;
+  }
+  .tap-tip{text-align:center; font-size:16px; color:#a08060; margin-top:6px;}
+  .question{text-align:center; font-size:var(--fs-question); font-weight:bold; color:var(--main-dark); margin:14px 0 6px;}
+
+  .progress-bar{height:14px; background:#ffe7ba; border-radius:8px; margin:14px 0 6px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--main); width:0; transition:width .35s ease;}
+  .progress-text{text-align:center; font-size:18px; color:#8a6d4b;}
+
+  .result{text-align:center; font-size:calc(var(--fs-body) + 6px); margin:10px 0; min-height:2.4em; font-weight:bold;}
+  .success{color:var(--success);} .danger{color:var(--danger);}
+  .reveal{text-align:center; font-size:calc(var(--fs-body) + 2px); color:var(--main-dark); margin:6px 0 2px; min-height:1.6em;}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;}
+  .option-btn{
+    min-height:var(--opt-h); padding:14px 8px;
+    font-size:var(--fs-option); background:#fff;
+    border:3px solid var(--border); border-radius:16px;
+    color:var(--main-dark); font-weight:bold; line-height:1.25;
+    cursor:pointer; touch-action:manipulation;
+    overflow-wrap:anywhere;
+  }
+  .option-btn:active{background:var(--border);}
+  .option-btn.right{background:#e8ffd9; border-color:var(--success); color:var(--success);}
+  .option-btn.wrong{background:#ffe9e6; border-color:var(--danger); color:var(--danger);}
+  .small{font-size:17px; color:#8a6d4b; text-align:center; margin-top:10px;}
+
+  .mask{position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50;}
+  .panel{background:#fff; border-radius:20px; padding:20px; width:100%; max-width:460px; max-height:86vh; overflow:auto;}
+  .panel h2{font-size:24px; color:var(--main-dark); text-align:center; margin-bottom:12px;}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 4px; border-bottom:2px solid #f0e0c0;}
+  .row:last-of-type{border-bottom:none;}
+  .row .label{font-size:20px; font-weight:bold;}
+  .row .desc{font-size:15px; color:#8a6d4b; font-weight:normal; display:block;}
+  .switch{width:74px; height:42px; flex:0 0 74px; border-radius:21px; border:none; background:#ddd; position:relative; cursor:pointer; transition:.2s;}
+  .switch::after{content:""; position:absolute; top:4px; left:4px; width:34px; height:34px; border-radius:50%; background:#fff; transition:.2s;}
+  .switch.on{background:var(--success);}
+  .switch.on::after{left:36px;}
+  .seg{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+  .seg button{padding:10px 16px; font-size:18px; border:2px solid var(--main); background:#fff; color:var(--main-dark); border-radius:10px; cursor:pointer;}
+  .seg button.on{background:var(--main); color:#fff;}
+  input[type=password],input[type=text]{width:100%; padding:14px; margin:8px 0; border:3px solid var(--border); border-radius:12px; font-size:18px; outline:none;}
+  input:focus{border-color:var(--main);}
   .hidden{display:none !important;}
-  .btn{display:block; width:100%; padding:14px; margin:10px 0; background:var(--main); color:#fff; border:none; border-radius:12px; font-size:20px; cursor:pointer; font-weight:bold;}
-  .btn:active{opacity:.8;}
-  .btn-opt{background:var(--light); color:var(--text); border:2px solid var(--main); margin:8px 0;}
-  .btn-opt:active{background:var(--main); color:#fff;}
-  input{padding:12px; width:100%; border:2px solid var(--light); border-radius:10px; font-size:18px; margin:8px 0; color:var(--text);}
-  #photoBox{width:180px; height:180px; border-radius:50%; background:var(--light); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; overflow:hidden; border:4px solid var(--main); font-size:32px; color:var(--main);}
-  #photoBox img{width:100%; height:100%; object-fit:cover;}
-  .question{text-align:center; font-size:24px; margin-bottom:16px; font-weight:bold;}
-  .progress-bar{height:12px; background:var(--light); border-radius:6px; overflow:hidden; margin:16px 0;}
-  .progress-fill{height:100%; background:var(--main); width:0%; transition:.3s;}
-  .success{color:var(--success); font-weight:bold;} .danger{color:var(--danger); font-weight:bold;}
-  .small{font-size:14px; color:#999; margin-top:10px; display:block;}
-  .top-token{position:absolute; top:16px; right:16px; font-size:14px;}
+
+  @media (max-width:360px){
+    .options{grid-template-columns:1fr;}
+  }
 </style>
 </head>
 <body>
-<h1>👴👵 认人练习</h1>
-<div class="top-token" id="tokenStatus">未设Token</div>
+<div class="container">
+  <div class="topbar">
+    <button class="icon-btn" id="replayBtn" title="再听一遍" aria-label="再听一遍" onclick="replay()">🔊</button>
+    <h1>👴👵 认人练习</h1>
+    <button class="icon-btn" title="设置" aria-label="设置" onclick="openSettings()">⚙️</button>
+  </div>
 
-<div id="setupPanel" class="panel">
-  <h3>初始设置</h3>
-  <input id="tokenInput" placeholder="GitHub Token(留空仅本地)" type="password">
-  <button class="btn" onclick="saveTokenAndLoad()">保存并加载人物</button>
-  <span class="small">管理端已配置人物和照片，填入Token可同步记录。</span>
+  <!-- 首屏 -->
+  <div class="card" id="homePanel">
+    <div id="homeTitle" style="text-align:center;font-size:calc(var(--fs-body)+6px);font-weight:bold;color:var(--main-dark);margin-bottom:8px;">
+      正在准备照片…
+    </div>
+    <div class="small" id="homeSub">请稍等一下</div>
+    <button class="btn" id="startBtn" onclick="startPractice()" disabled>开 始 练 习</button>
+    <div class="small" id="homeTip"></div>
+  </div>
+
+  <!-- 练习区 -->
+  <div class="card hidden" id="practicePanel">
+    <div class="photo-box">
+      <img id="photoImg" alt="人物照片">
+    </div>
+    <div class="tap-tip">（点照片可以再听一遍）</div>
+    <div class="question" id="questionText">这是谁？</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">第 1 题 / 共 10 题</div>
+    <div class="result" id="resultText" aria-live="assertive"></div>
+    <div class="reveal" id="revealText"></div>
+    <div class="options" id="optionsBox"></div>
+    <button class="btn btn-secondary hidden" id="nextBtn" onclick="nextQuestion()">下 一 题</button>
+  </div>
+
+  <!-- 结束面板 -->
+  <div class="card hidden" id="endPanel">
+    <h2 style="text-align:center;color:var(--main-dark);font-size:calc(var(--fs-btn)+6px);">练习结束啦！</h2>
+    <div class="result" id="endResult" aria-live="assertive"></div>
+    <div id="endEncourage" class="small"></div>
+    <button class="btn" onclick="startPractice()">再 练 一 次</button>
+    <button class="btn btn-secondary" onclick="goHome()">回 到 首 页</button>
+  </div>
 </div>
 
-<div id="practicePanel" class="panel hidden">
-  <div id="photoBox">无图</div>
-  <div class="question" id="questionText">这是谁？</div>
-  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-  <div id="optionsBox"></div>
-  <div id="resultText" style="text-align:center; margin:10px 0; font-size:20px;"></div>
-  <button id="nextBtn" class="btn hidden" onclick="nextQ()">下一题</button>
-</div>
+<!-- 设置面板 -->
+<div class="mask hidden" id="settingsMask" onclick="if(event.target===this)closeSettings()">
+  <div class="panel">
+    <h2>⚙️ 设置</h2>
 
-<div id="endPanel" class="panel hidden" style="text-align:center;">
-  <h2>练习结束</h2>
-  <div id="endResult" style="font-size:22px; margin:20px 0;"></div>
-  <button class="btn" onclick="location.reload()">再来一组</button>
+    <div class="row">
+      <div><span class="label">朗读题目</span><span class="desc">用语音念出题目和名字</span></div>
+      <button class="switch on" id="swSpeak" onclick="toggle('speak')" aria-label="朗读题目"></button>
+    </div>
+    <div class="row">
+      <div><span class="label">声音提示</span><span class="desc">答对响两声、答错响一声</span></div>
+      <button class="switch on" id="swSound" onclick="toggle('sound')" aria-label="声音提示"></button>
+    </div>
+    <div class="row">
+      <div><span class="label">震动提醒</span><span class="desc">答对轻震、答错长震（部分手机不支持）</span></div>
+      <button class="switch on" id="swVibrate" onclick="toggle('vibrate')" aria-label="震动提醒"></button>
+    </div>
+    <div class="row">
+      <div><span class="label">超大字</span><span class="desc">字更大、按钮更高</span></div>
+      <button class="switch" id="swBig" onclick="toggle('big')" aria-label="超大字"></button>
+    </div>
+    <div class="row">
+      <div><span class="label">答对自动下一题</span><span class="desc">答错时一定等你手动点，不着急</span></div>
+      <button class="switch on" id="swAuto" onclick="toggle('auto')" aria-label="自动下一题"></button>
+    </div>
+    <div class="row">
+      <div><span class="label">每次题数</span><span class="desc">题少一点，练得轻松些</span></div>
+      <div class="seg" id="segCount">
+        <button onclick="setCount(5)">5 题</button>
+        <button onclick="setCount(10)">10 题</button>
+        <button onclick="setCount(20)">20 题</button>
+      </div>
+    </div>
+
+    <div class="row" style="display:block;">
+      <span class="label">管理端 Token（可选）</span>
+      <span class="desc">填了才能把成绩发给家人；不填也能照常练习</span>
+      <input type="password" id="tokenInput" placeholder="不填也可以练习">
+      <button class="btn btn-secondary" style="font-size:20px;padding:14px;" onclick="saveToken()">保存 Token</button>
+    </div>
+
+    <button class="btn" onclick="closeSettings()">关 闭</button>
+    <div class="small" id="settingTip"></div>
+  </div>
 </div>
 
 <script>
-const REPO='Kenny-17-Z/lnrrza';
-const CONFIG_URL=`https://api.github.com/repos/${REPO}/contents/config.json`;
+/* ========== 配置 ========== */
+const REPO='Kenny-17-Z/lnrrzza', BRANCH='main';
+const CONFIG_URL=`https://raw.githubusercontent.com/${REPO}/${BRANCH}/config.json`;
 const DATA_URL=`https://api.github.com/repos/${REPO}/contents/data.json`;
-let PERSONS=[], PHOTOS={}, total=0, score=0, currentQ=null, sessionDetails=[];
 
-// 安全Base64(解决中文乱码)
 function safeBtoa(str){return btoa(unescape(encodeURIComponent(str)));}
 function safeAtob(b64){return decodeURIComponent(escape(atob(b64)));}
 
-function getToken(){return localStorage.getItem('gh_token')||'';}
-function setToken(t){localStorage.setItem('gh_token',t);}
-function updateTokenStatus(){document.getElementById('tokenStatus').innerText=getToken()?'已设Token':'未设Token';}
+const PLACEHOLDER='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">'+
+  '<rect width="240" height="240" fill="#ffd666"/>'+
+  '<text x="120" y="140" font-size="56" text-anchor="middle" fill="#874d00">暂无照片</text></svg>');
 
+/* ========== 状态 ========== */
+const settings=Object.assign(
+  {speak:true, sound:true, vibrate:true, big:false, auto:true, count:10},
+  JSON.parse(localStorage.getItem('rr_settings')||'{}')
+);
+let PERSONS=[], PHOTOS={};
+let currentQ=null, score=0, total=0, answered=false;
+let sessionDetails=[], autoTimer=null;
+let audioCtx=null, zhVoice=null;
+
+/* ========== 工具 ========== */
+function $(id){return document.getElementById(id);}
+function saveSettings(){localStorage.setItem('rr_settings',JSON.stringify(settings));}
+function getToken(){return localStorage.getItem('gh_token')||'';}
+
+function unlockAudio(){
+  if(settings.sound && !audioCtx){
+    try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  }
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+}
+function beep(freq,start,dur){
+  if(!settings.sound||!audioCtx) return;
+  try{
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime+start);
+    g.gain.exponentialRampToValueAtTime(0.25,audioCtx.currentTime+start+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+start+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(audioCtx.currentTime+start); o.stop(audioCtx.currentTime+start+dur+0.02);
+  }catch(e){}
+}
+function sfxRight(){beep(660,0,.16); beep(880,.16,.26);}
+function sfxWrong(){beep(300,0,.3);}
+function buzz(ms){
+  if(!settings.vibrate) return;
+  try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}
+}
+
+function pickVoice(){
+  if(!('speechSynthesis' in window)) return;
+  const vs=speechSynthesis.getVoices()||[];
+  zhVoice=vs.find(v=>/zh[-_]CN/i.test(v.lang))||vs.find(v=>/zh/i.test(v.lang))||null;
+}
+if('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged=pickVoice;
+}
+function speak(text,rate){
+  if(!settings.speak||!('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='zh-CN'; u.rate=rate||0.85; u.pitch=1.05; u.volume=1;
+    if(zhVoice) u.voice=zhVoice;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function replay(){
+  if(currentQ){ speak('这是谁？'); return; }
+  speak('点中间那个大按钮，就可以开始练习');
+}
+
+/* ========== 加载人物 ========== */
 async function loadConfig(){
   try{
-    const res=await fetch(CONFIG_URL);
-    const d=await res.json();
-    if(!d.content) throw new Error('无配置');
-    const cfg=JSON.parse(safeAtob(d.content));
-    
-    // 适配管理端数据：persons可能是对象数组[{name,photo}]或纯数组
-    if(Array.isArray(cfg.persons)){
-      PERSONS=cfg.persons.map(p=>typeof p==='string'?{name:p,photo:''}:p).filter(p=>p.name);
-    }
+    const r=await fetch(CONFIG_URL+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const cfg=await r.json();
+    PERSONS=(cfg.persons||[]).map(p=>typeof p==='string'
+      ? {name:p, relation:'', hint:''}
+      : {name:p.name||p, relation:p.relation||'', hint:p.hint||''}
+    ).filter(p=>p.name);
     PHOTOS=cfg.photos||{};
-    // 合并照片路径
-    PERSONS.forEach(p=>{ if(!PHOTOS[p.name] && p.photo) PHOTOS[p.name]=p.photo; });
-    
-    if(!PERSONS.length) throw new Error('无人');
-    document.getElementById('setupPanel').classList.add('hidden');
-    document.getElementById('practicePanel').classList.remove('hidden');
-    nextQ();
+    if(!PERSONS.length){
+      $('homeTitle').innerText='还没有添加人物';
+      $('homeSub').innerText='请让家人在管理端添加亲人的照片和名字';
+      $('startBtn').disabled=true;
+      return;
+    }
+    $('homeTitle').innerText='已准备好 '+PERSONS.length+' 位亲人';
+    $('homeSub').innerText='每次练 '+settings.count+' 题，慢慢来，不着急';
+    $('homeTip').innerText = getToken() ? '成绩会自动发给家人' : '（未设置 Token，成绩只存在本机）';
+    $('startBtn').disabled=false;
   }catch(e){
-    document.getElementById('setupPanel').classList.remove('hidden');
-    alert('加载人物失败：'+e.message+'，请检查管理端配置');
+    $('homeTitle').innerText='照片加载失败';
+    $('homeSub').innerText='请检查网络后，重新打开这个页面（'+e.message+'）';
   }
 }
 
-function saveTokenAndLoad(){
-  setToken(document.getElementById('tokenInput').value.trim());
-  updateTokenStatus();
+/* ========== 设置面板 ========== */
+function openSettings(){
+  $('tokenInput').value=getToken();
+  applySettings();
+  $('settingsMask').classList.remove('hidden');
+  $('settingTip').innerText='';
+}
+function closeSettings(){$('settingsMask').classList.add('hidden');}
+function toggle(k){
+  settings[k]=!settings[k];
+  if(k==='sound'&&settings.sound) unlockAudio();
+  if(k==='speak'&&settings.speak) speak('已打开朗读',1);
+  saveSettings(); applySettings();
+}
+function setCount(n){
+  settings.count=n; saveSettings(); applySettings();
+  $('homeSub').innerText='每次练 '+n+' 题，慢慢来，不着急';
+}
+function applySettings(){
+  document.body.classList.toggle('big-font',settings.big);
+  $('swSpeak').classList.toggle('on',settings.speak);
+  $('swSound').classList.toggle('on',settings.sound);
+  $('swVibrate').classList.toggle('on',settings.vibrate);
+  $('swBig').classList.toggle('on',settings.big);
+  $('swAuto').classList.toggle('on',settings.auto);
+  [...$('segCount').children].forEach(b=>b.classList.toggle('on', b.textContent.trim()===settings.count+' 题'));
+}
+function saveToken(){
+  localStorage.setItem('gh_token',$('tokenInput').value.trim());
+  $('settingTip').innerText='已保存。练习结束后会自动上传成绩。';
+  $('homeTip').innerText = getToken() ? '成绩会自动发给家人' : '（未设置 Token，成绩只存在本机）';
+  flushPending();
+}
+
+/* ========== 练习流程 ========== */
+function startPractice(){
+  clearTimeout(autoTimer);
+  unlockAudio();
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  if(!PERSONS.length){ loadConfig(); return; }
+
+  score=0; total=0; sessionDetails=[];
+  $('homePanel').classList.add('hidden');
+  $('endPanel').classList.add('hidden');
+  $('practicePanel').classList.remove('hidden');
+  nextQuestion();
+}
+
+function nextQuestion(){
+  clearTimeout(autoTimer);
+  if(total>=settings.count){ finishPractice(); return; }
+
+  answered=false;
+  currentQ=PERSONS[Math.floor(Math.random()*PERSONS.length)];
+
+  const src=PHOTOS[currentQ.name];
+  const img=$('photoImg');
+  img.onerror=()=>{img.onerror=null; img.src=PLACEHOLDER;};
+  img.src=src||PLACEHOLDER;
+
+  $('questionText').innerText='这是谁？';
+  $('resultText').innerText='';
+  $('revealText').innerText='';
+  $('nextBtn').classList.add('hidden');
+
+  const pool=PERSONS.filter(p=>p.name!==currentQ.name);
+  const others=pool.filter(p=>p.relation!==currentQ.relation);
+  const rest=pool.filter(p=>p.relation===currentQ.relation);
+  shuffle(others); shuffle(rest);
+  const opts=[currentQ,...others,...rest].slice(0,Math.min(4,PERSONS.length));
+  shuffle(opts);
+
+  const box=$('optionsBox');
+  box.innerHTML='';
+  opts.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='option-btn';
+    b.type='button';
+    b.textContent=p.name;
+    b.onclick=()=>answer(p,b);
+    box.appendChild(b);
+  });
+
+  updateProgress();
+  speak('这是谁？');
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+
+function answer(picked,btn){
+  if(answered) return;
+  answered=true;
+  clearTimeout(autoTimer);
+
+  const correct=picked.name===currentQ.name;
+  total++; if(correct) score++;
+  sessionDetails.push({expected:currentQ.name, actual:picked.name, correct, at:new Date().toISOString()});
+
+  [...$('optionsBox').children].forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===currentQ.name) b.classList.add('right');
+  });
+  if(!correct) btn.classList.add('wrong');
+
+  $('revealText').innerText = currentQ.relation ? (currentQ.name+'（'+currentQ.relation+'）') : currentQ.name;
+
+  if(correct){
+    $('resultText').innerHTML='<span class="success">✅ 答对了！</span>';
+    sfxRight(); buzz(60);
+    speak('答对了，'+currentQ.name);
+  }else{
+    const hint=currentQ.hint?('，'+currentQ.hint):'';
+    $('resultText').innerHTML='<span class="danger">❌ 再看一看</span>';
+    sfxWrong(); buzz([120,80,120]);
+    speak('不对，这是'+currentQ.name+(currentQ.relation?('，你的'+currentQ.relation):'')+hint,'+0.8');
+  }
+
+  updateProgress();
+
+  const nb=$('nextBtn');
+  nb.classList.remove('hidden');
+  nb.disabled=false;
+
+  if(correct && settings.auto){
+    let left=3;
+    const tick=()=>{
+      if(left<=0){ nb.innerText='下 一 题'; nextQuestion(); return; }
+      nb.innerText='下 一 题（'+left+'）';
+      left--; autoTimer=setTimeout(tick,1000);
+    };
+    tick();
+  }else{
+    nb.innerText='下 一 题';
+  }
+}
+
+function updateProgress(){
+  const n=settings.count;
+  $('progressFill').style.width=Math.min(100,total/n*100)+'%';
+  $('progressText').innerText='第 '+Math.min(total+1,n)+' 题 / 共 '+n+' 题　答对 '+score+' 题';
+}
+
+/* ========== 结束 & 上传 ========== */
+function goHome(){
+  clearTimeout(autoTimer);
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  $('practicePanel').classList.add('hidden');
+  $('endPanel').classList.add('hidden');
+  $('homePanel').classList.remove('hidden');
   loadConfig();
 }
 
-function nextQ(){
-  if(total>=10){finishPractice(); return;}
-  // 随机选人（取name）
-  const target=PERSONS[Math.floor(Math.random()*PERSONS.length)];
-  currentQ=target.name;
-  const photoUrl=PHOTOS[target.name]||target.photo||'';
-  const box=document.getElementById('photoBox');
-  if(photoUrl){box.innerHTML=`<img src="${photoUrl}" onerror="this.onerror=null;this.parentNode.innerText='无图'">`;}
-  else{box.innerText='无图';}
-  
-  document.getElementById('questionText').innerText='这是谁？';
-  document.getElementById('resultText').innerText='';
-  document.getElementById('nextBtn').classList.add('hidden');
-
-  // 生成选项（1正确+干扰）
-  let opts=[target.name];
-  while(opts.length<Math.min(4,PERSONS.length)){
-    const r=PERSONS[Math.floor(Math.random()*PERSONS.length)].name;
-    if(!opts.includes(r)) opts.push(r);
-  }
-  opts.sort(()=>Math.random()-0.5);
-  document.getElementById('optionsBox').innerHTML=opts.map(n=>`<button class="btn btn-opt" onclick="answer('${n.replace(/'/g,"\\'")}')">${n}</button>`).join('');
-  updateProgress();
-}
-
-function answer(ans){
-  const correct=ans===currentQ;
-  total++; if(correct) score++;
-  sessionDetails.push({expected:currentQ, actual:ans, correct});
-  document.getElementById('resultText').innerHTML=correct?'<span class="success">✅ 正确！</span>':'<span class="danger">❌ 不对，是 '+currentQ+'</span>';
-  document.getElementById('optionsBox').innerHTML='';
-  document.getElementById('nextBtn').classList.remove('hidden');
-  updateScore(); updateProgress();
-}
-
-function updateScore(){document.getElementById('tokenStatus').innerText=`共${total}题 正确${score}题(${total?Math.round(score/total*100):0}%) | ${getToken()?'已设':'未设'}`;}
-function updateProgress(){document.getElementById('progressFill').style.width=(total/10 * 100)+'%';}
-
 async function finishPractice(){
-  document.getElementById('practicePanel').classList.add('hidden');
-  document.getElementById('endPanel').classList.remove('hidden');
+  clearTimeout(autoTimer);
+  $('practicePanel').classList.add('hidden');
+  $('endPanel').classList.remove('hidden');
+
   const acc=total?Math.round(score/total*100):0;
-  let html=`本次共 <b>${total}</b> 题，正确 <b>${score}</b> 题，正确率 <b>${acc}%</b>`;
-  const token=getToken();
-  if(!token){html+='<br><span class="small">（未填Token，记录仅本机保留）</span>';}
-  else{
-    const today=new Date().toISOString().slice(0,10);
-    const newRec={date:today, count:total, correct:score, total, details:sessionDetails};
-    try{
-      let sha=null, existing=[];
-      const rd=await fetch(DATA_URL,{headers:{Authorization:'token '+token}}).then(r=>r.json());
-      if(rd.content){existing=JSON.parse(safeAtob(rd.content)); sha=rd.sha;}
-      existing.push(newRec);
-      await fetch(DATA_URL,{method:'PUT', headers:{Authorization:'token '+token, 'Content-Type':'application/json'}, body:JSON.stringify({message:'practice session', content:safeBtoa(JSON.stringify(existing,null,2)), sha})});
-      html+='<br><span class="success">✅ 记录已同步到管理端</span>';
-    }catch(e){html+='<br><span class="danger">同步失败：'+e.message+'</span>';}
-  }
-  document.getElementById('endResult').innerHTML=html;
+  $('endResult').innerHTML='本次共 <b>'+total+'</b> 题，答对 <b>'+score+'</b> 题<br>正确率 <b style="font-size:1.4em">'+acc+'%</b>';
+  $('endEncourage').innerText = acc>=90?'太棒了，记得很牢！':acc>=60?'不错，再练几遍就更熟啦':'慢慢来，多练几次就会记住的';
+
+  if(acc>=90) sfxRight(); else sfxWrong();
+  buzz(acc>=90?60:[100,80,100]);
+  speak('练习结束，一共'+total+'题，答对'+score+'题。'+$('endEncourage').innerText,0.8);
+
+  try{
+    const hist=JSON.parse(localStorage.getItem('rr_history')||'[]');
+    hist.push({date:new Date().toISOString().slice(0,10), total, correct:score, details:sessionDetails});
+    localStorage.setItem('rr_history',JSON.stringify(hist.slice(-200)));
+  }catch(e){}
+
+  await uploadRecord({date:new Date().toISOString().slice(0,10), count:total, correct:score, total, accuracy:acc, details:sessionDetails});
 }
 
-updateTokenStatus();
-if(getToken()) loadConfig();
+async function uploadRecord(rec){
+  const token=getToken();
+  if(!token){
+    try{
+      const q=JSON.parse(localStorage.getItem('rr_pending')||'[]'); q.push(rec);
+      localStorage.setItem('rr_pending',JSON.stringify(q));
+    }catch(e){}
+    $('endEncourage').innerHTML+='<br><span class="small">（成绩已存在本机；补填 Token 后会自动上传）</span>';
+    return;
+  }
+  $('endEncourage').innerHTML+='<br><span class="small" id="upTip">正在保存成绩…</span>';
+  try{
+    let sha=null, list=[];
+    const r=await fetch(DATA_URL+'?t='+Date.now(),{headers:{Authorization:'token '+token}});
+    if(r.status===404){
+      list=[];
+    }else if(!r.ok){
+      throw new Error('读取失败 '+r.status);
+    }else{
+      const d=await r.json();
+      if(d.content){ try{list=JSON.parse(safeAtob(d.content));}catch(e){list=[];} }
+      sha=d.sha||null;
+    }
+    if(!Array.isArray(list)) list=[];
+
+    const pend=JSON.parse(localStorage.getItem('rr_pending')||'[]');
+    list=list.concat(pend,[rec]);
+    localStorage.removeItem('rr_pending');
+
+    const body={message:'practice session '+new Date().toISOString(), content:safeBtoa(JSON.stringify(list,null,2))};
+    if(sha) body.sha=sha;
+    const up=await fetch(DATA_URL,{method:'PUT',headers:{Authorization:'token '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!up.ok) throw new Error('上传失败 '+up.status);
+    const tip=$('upTip'); if(tip) tip.innerHTML='<span class="success">✅ 成绩已发给家人</span>';
+  }catch(e){
+    try{
+      const q=JSON.parse(localStorage.getItem('rr_pending')||'[]'); q.push(rec);
+      localStorage.setItem('rr_pending',JSON.stringify(q));
+    }catch(_){}
+    const tip=$('upTip'); if(tip) tip.innerHTML='<span class="danger">保存失败（'+e.message+'），成绩已留在本机</span>';
+  }
+}
+async function flushPending(){
+  const q=JSON.parse(localStorage.getItem('rr_pending')||'[]');
+  if(!q.length||!getToken()) return;
+  localStorage.removeItem('rr_pending');
+  for(const rec of q){ await uploadRecord(rec); }
+}
+
+/* ========== 初始化 ========== */
+$('photoImg').onclick=replay;
+$('questionText').onclick=replay;
+document.addEventListener('touchstart',function once(){ unlockAudio(); pickVoice(); document.removeEventListener('touchstart',once); },{passive:true});
+document.addEventListener('click',function once(){ unlockAudio(); pickVoice(); document.removeEventListener('click',once); });
+applySettings();
+loadConfig();
+flushPending();
 </script>
 </body>
 </html>
