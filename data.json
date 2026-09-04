@@ -76,5 +76,50 @@
         "at": "2026-09-04T09:33:01.145Z"
       }
     ]
+  },
+  {
+    "date": "2026-09-04",
+    "count": 1,
+    "correct": 1,
+    "total": 1,
+    "accuracy": 100,
+    "details": [
+      {
+        "expected": "泉",
+        "actual": "泉",
+        "correct": true,
+        "at": "2026-09-04T10:44:16.716Z"
+      },
+      {
+        "expected": "红",
+        "actual": "红",
+        "correct": true,
+        "at": "2026-09-04T10:44:21.283Z"
+      },
+      {
+        "expected": "欣",
+        "actual": "欣",
+        "correct": true,
+        "at": "2026-09-04T10:44:25.814Z"
+      },
+      {
+        "expected": "红",
+        "actual": "慧贤",
+        "correct": false,
+        "at": "2026-09-04T10:44:31.631Z"
+      },
+      {
+        "expected": "慧贤",
+        "actual": "慧贤",
+        "correct": true,
+        "at": "2026-09-04T10:44:36.132Z"
+      },
+      {
+        "expected": "红",
+        "actual": "红",
+        "correct": true,
+        "at": "2026-09-04T10:44:41.349Z"
+      }
+    ]
   }
 ]
