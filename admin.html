@@ -299,6 +299,14 @@ let TOKEN=localStorage.getItem('gh_token')||'';
 let CONFIG={persons:[]};
 let RECORDS=[];
 
+// ================= 安全 Base64（解决中文乱码） =================
+function safeBtoa(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function safeAtoa(b64) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
 // ================= Tab & Token =================
 function showTab(t){
   ['analysis','persons','upload'].forEach(x=>document.getElementById('tab-'+x).style.display=x===t?'block':'none');
@@ -309,7 +317,7 @@ function showTab(t){
 document.getElementById('token').value=TOKEN;
 function saveToken(){ TOKEN=document.getElementById('token').value.trim(); localStorage.setItem('gh_token',TOKEN); alert('已保存'); }
 
-// ================= GitHub API（修复版，只声明一次） =================
+// ================= GitHub API =================
 async function gh(path,opts={}){
   const headers={'Accept':'application/vnd.github.v3+json'};
   if(TOKEN) headers['Authorization']='token '+TOKEN;
@@ -328,7 +336,7 @@ async function gh(path,opts={}){
 async function loadConfig(){
   try{ 
     const d=await gh('config.json'); 
-    CONFIG=d.content?JSON.parse(atob(d.content)):{persons:[]}; 
+    CONFIG=d.content?JSON.parse(safeAtoa(d.content)):{persons:[]}; 
   }catch(e){ 
     console.error('加载配置失败:',e);
     CONFIG={persons:[]};
@@ -342,7 +350,7 @@ async function saveConfig(){
       method:'PUT',
       body:JSON.stringify({
         message:'update config',
-        content:btoa(JSON.stringify(CONFIG,null,2)),
+        content:safeBtoa(JSON.stringify(CONFIG,null,2)),
         sha:d.sha
       })
     });
@@ -354,7 +362,7 @@ async function saveConfig(){
 async function loadData(){ 
   try{ 
     const d=await gh('data.json'); 
-    RECORDS=d.content?JSON.parse(atob(d.content)):[]; 
+    RECORDS=d.content?JSON.parse(safeAtoa(d.content)):[]; 
   }catch(e){
     console.error('加载数据失败:',e);
     RECORDS=[];
@@ -413,7 +421,7 @@ async function modalAppend(idx){
   const f=document.getElementById('modalAddFile').files; if(!f.length) return;
   const p=CONFIG.persons[idx];
   for(const file of f){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(btoa(fr.result));fr.readAsBinaryString(file);});
+    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(safeBtoa(fr.result));fr.readAsDataURL(file);});
     const path=`photos/${p.name}/${file.name}`;
     await gh(path,{method:'PUT',body:JSON.stringify({message:'add photo',content:b64})});
     p.photos.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
@@ -425,7 +433,7 @@ async function appendPhotos(){
   const f=document.getElementById('addPhotos').files; if(!f.length) return;
   const p=CONFIG.persons[i];
   for(const file of f){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(btoa(fr.result));fr.readAsBinaryString(file);});
+    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(safeBtoa(fr.result));fr.readAsDataURL(file);});
     const path=`photos/${p.name}/${file.name}`;
     await gh(path,{method:'PUT',body:JSON.stringify({message:'add photo',content:b64})});
     p.photos.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
@@ -436,7 +444,7 @@ async function addPerson(){
   const n=document.getElementById('newName').value.trim(); if(!n) return;
   const f=document.getElementById('newPhotos').files; let photos=[];
   for(const file of f){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(btoa(fr.result));fr.readAsBinaryString(file);});
+    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(safeBtoa(fr.result));fr.readAsDataURL(file);});
     const path=`photos/${n}/${file.name}`;
     await gh(path,{method:'PUT',body:JSON.stringify({message:'new person photo',content:b64})});
     photos.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
@@ -694,7 +702,7 @@ function uploadData(){
       let sha=null;
       try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
       
-      const body={message:'upload data (replace all)',content:btoa(JSON.stringify(data,null,2))};
+      const body={message:'upload data (replace all)',content:safeBtoa(JSON.stringify(data,null,2))};
       if(sha) body.sha=sha;
       await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
       
@@ -720,7 +728,7 @@ function mergeFiles(){
       
       let sha=null;
       try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
-      const body={message:'merge files',content:btoa(JSON.stringify(merged,null,2))};
+      const body={message:'merge files',content:safeBtoa(JSON.stringify(merged,null,2))};
       if(sha) body.sha=sha;
       await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
       
@@ -745,7 +753,7 @@ function mergePasted(){
       
       let sha=null;
       try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
-      const body={message:'merge pasted',content:btoa(JSON.stringify(merged,null,2))};
+      const body={message:'merge pasted',content:safeBtoa(JSON.stringify(merged,null,2))};
       if(sha) body.sha=sha;
       await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
       
@@ -777,7 +785,7 @@ async function clearAllData(){
   try{
     let sha=null;
     try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
-    const body={message:'clear all practice data',content:btoa(JSON.stringify([],null,2))};
+    const body={message:'clear all practice data',content:safeBtoa(JSON.stringify([],null,2))};
     if(sha) body.sha=sha;
     await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
     RECORDS=[];
