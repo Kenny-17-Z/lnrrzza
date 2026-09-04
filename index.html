@@ -3,139 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>老人认人练习</title>
+<title>认人练习</title>
 <style>
-  :root{
-    --bg:#fff9e6; --main:#d48806; --main-dark:#874d00;
-    --card:#ffffff; --border:#ffd666; --text:#5d4037; --danger:#cf1322; --success:#52c41a;
-  }
-  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
-  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); padding:16px; font-size:18px;}
-  .container{max-width:600px; margin:0 auto;}
-  h1{text-align:center; color:var(--main-dark); font-size:28px; margin:16px 0; letter-spacing:2px;}
-  .card{background:var(--card); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 12px rgba(212,136,6,.15); border:2px solid var(--border);}
-  .btn{display:block; width:100%; padding:16px; margin:8px 0; background:var(--main); color:#fff; border:none; border-radius:12px; font-size:22px; font-weight:bold; cursor:pointer; touch-action:manipulation;}
-  .btn:active{background:var(--main-dark); transform:scale(.98);}
-  .btn-secondary{background:#fff; color:var(--main-dark); border:2px solid var(--main);}
-  .btn-danger{background:var(--danger);}
-  .photo-box{text-align:center; margin:16px 0;}
-  .photo-box img{max-width:220px; max-height:220px; border-radius:50%; border:4px solid var(--border); background:#fff;}
-  .name-display{text-align:center; font-size:32px; font-weight:bold; color:var(--main-dark); margin:12px 0;}
-  .options{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
-  .option-btn{padding:18px 10px; font-size:24px; background:#fff; border:2px solid var(--border); border-radius:12px; color:var(--main-dark); font-weight:bold; cursor:pointer;}
-  .option-btn:active{background:var(--border);}
-  .result{text-align:center; font-size:24px; margin:16px 0; min-height:36px;}
-  .success{color:var(--success);} .danger{color:var(--danger);}
-  .small{font-size:16px; color:#888; text-align:center; margin-top:8px;}
-  input[type=text], input[type=password]{width:100%; padding:14px; margin:8px 0; border:2px solid var(--border); border-radius:10px; font-size:18px; outline:none;}
-  input:focus{border-color:var(--main);}
-  .hidden{display:none;}
-  .progress-bar{height:10px; background:#ffe7ba; border-radius:5px; margin:12px 0; overflow:hidden;}
-  .progress-fill{height:100%; background:var(--main); transition:.3s;}
-  .setup-panel{border:2px dashed var(--main); background:#fff3cd;}
+  :root{ --main:#d48806; --light:#fff7e6; --bg:#fff1b8; --card:#fff; --text:#874d00; --danger:#cf1322; --success:#52c41a; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); padding:16px; font-size:18px;}
+  h1{text-align:center; margin-bottom:20px; color:var(--main); font-size:26px;}
+  .panel{background:var(--card); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 12px rgba(212,136,6,.15); border:2px solid var(--light);}
+  .hidden{display:none !important;}
+  .btn{display:block; width:100%; padding:14px; margin:10px 0; background:var(--main); color:#fff; border:none; border-radius:12px; font-size:20px; cursor:pointer; font-weight:bold;}
+  .btn:active{opacity:.8;}
+  .btn-opt{background:var(--light); color:var(--text); border:2px solid var(--main); margin:8px 0;}
+  .btn-opt:active{background:var(--main); color:#fff;}
+  input{padding:12px; width:100%; border:2px solid var(--light); border-radius:10px; font-size:18px; margin:8px 0; color:var(--text);}
+  #photoBox{width:180px; height:180px; border-radius:50%; background:var(--light); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; overflow:hidden; border:4px solid var(--main); font-size:32px; color:var(--main);}
+  #photoBox img{width:100%; height:100%; object-fit:cover;}
+  .question{text-align:center; font-size:24px; margin-bottom:16px; font-weight:bold;}
+  .progress-bar{height:12px; background:var(--light); border-radius:6px; overflow:hidden; margin:16px 0;}
+  .progress-fill{height:100%; background:var(--main); width:0%; transition:.3s;}
+  .success{color:var(--success); font-weight:bold;} .danger{color:var(--danger); font-weight:bold;}
+  .small{font-size:14px; color:#999; margin-top:10px; display:block;}
+  .top-token{position:absolute; top:16px; right:16px; font-size:14px;}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>👴👵 认人练习</h1>
-  
-  <!-- 设置面板（首次需填Token用于上传，可本地缓存） -->
-  <div class="card setup-panel" id="setupPanel">
-    <div><b>初始设置</b>（仅需一次）</div>
-    <input type="password" id="tokenInput" placeholder="管理端 Token（用于保存练习记录，可不填仅本地练）">
-    <div class="small">人物照片自动从管理端同步，无需配置</div>
-    <button class="btn" onclick="saveTokenAndLoad()">保存并加载人物</button>
-  </div>
+<h1>👴👵 认人练习</h1>
+<div class="top-token" id="tokenStatus">未设Token</div>
 
-  <!-- 练习区 -->
-  <div class="card hidden" id="practicePanel">
-    <div class="photo-box">
-      <img id="photoImg" src="" alt="人物照片" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect width=%22200%22 height=%22200%22 fill=%22%23ffd666%22/><text x=%22100%22 y=%22110%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22%23874d00%22>无图</text></svg>'">
-    </div>
-    <div class="name-display" id="questionText">准备开始</div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="result" id="resultText"></div>
-    <div class="options" id="optionsBox"></div>
-    <button class="btn btn-secondary hidden" id="nextBtn" onclick="nextQuestion()">下一题</button>
-    <div class="small" id="scoreText">共 0 题，正确 0 题</div>
-  </div>
+<div id="setupPanel" class="panel">
+  <h3>初始设置</h3>
+  <input id="tokenInput" placeholder="GitHub Token(留空仅本地)" type="password">
+  <button class="btn" onclick="saveTokenAndLoad()">保存并加载人物</button>
+  <span class="small">管理端已配置人物和照片，填入Token可同步记录。</span>
+</div>
 
-  <!-- 结束面板 -->
-  <div class="card hidden" id="endPanel">
-    <h2 style="text-align:center;color:var(--main-dark)">练习结束！</h2>
-    <div class="result" id="endResult"></div>
-    <button class="btn" onclick="startPractice()">再练一次</button>
-    <button class="btn btn-secondary" onclick="location.reload()">返回</button>
-  </div>
+<div id="practicePanel" class="panel hidden">
+  <div id="photoBox">无图</div>
+  <div class="question" id="questionText">这是谁？</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div id="optionsBox"></div>
+  <div id="resultText" style="text-align:center; margin:10px 0; font-size:20px;"></div>
+  <button id="nextBtn" class="btn hidden" onclick="nextQ()">下一题</button>
+</div>
+
+<div id="endPanel" class="panel hidden" style="text-align:center;">
+  <h2>练习结束</h2>
+  <div id="endResult" style="font-size:22px; margin:20px 0;"></div>
+  <button class="btn" onclick="location.reload()">再来一组</button>
 </div>
 
 <script>
-const REPO='Kenny-17-Z/lnrrzza', BRANCH='main';
-const CONFIG_URL=`https://raw.githubusercontent.com/${REPO}/${BRANCH}/config.json`;
+const REPO='Kenny-17-Z/lnrrza';
+const CONFIG_URL=`https://api.github.com/repos/${REPO}/contents/config.json`;
 const DATA_URL=`https://api.github.com/repos/${REPO}/contents/data.json`;
+let PERSONS=[], PHOTOS={}, total=0, score=0, currentQ=null, sessionDetails=[];
 
-// 安全中文 Base64（与管理端一致）
+// 安全Base64(解决中文乱码)
 function safeBtoa(str){return btoa(unescape(encodeURIComponent(str)));}
 function safeAtob(b64){return decodeURIComponent(escape(atob(b64)));}
 
-let PERSONS=[], PHOTOS={}, RECORDS=[];
-let currentQ=null, score=0, total=0, sessionDetails=[];
-
-// 加载Token
 function getToken(){return localStorage.getItem('gh_token')||'';}
-function saveToken(t){localStorage.setItem('gh_token',t);}
-function saveTokenAndLoad(){
-  saveToken(document.getElementById('tokenInput').value.trim());
-  loadConfigAndStart();
-}
+function setToken(t){localStorage.setItem('gh_token',t);}
+function updateTokenStatus(){document.getElementById('tokenStatus').innerText=getToken()?'已设Token':'未设Token';}
 
-// 读取 config.json（免Token，raw 支持 CORS）
-async function loadConfigAndStart(){
+async function loadConfig(){
   try{
-    const r=await fetch(CONFIG_URL); if(!r.ok) throw new Error('加载人物失败');
-    const cfg=await r.json();
-    PERSONS=cfg.persons||[];
+    const res=await fetch(CONFIG_URL);
+    const d=await res.json();
+    if(!d.content) throw new Error('无配置');
+    const cfg=JSON.parse(safeAtob(d.content));
+    
+    // 适配管理端数据：persons可能是对象数组[{name,photo}]或纯数组
+    if(Array.isArray(cfg.persons)){
+      PERSONS=cfg.persons.map(p=>typeof p==='string'?{name:p,photo:''}:p).filter(p=>p.name);
+    }
     PHOTOS=cfg.photos||{};
-    if(!PERSONS.length){alert('管理端还没添加人物，请先去管理端添加！'); return;}
+    // 合并照片路径
+    PERSONS.forEach(p=>{ if(!PHOTOS[p.name] && p.photo) PHOTOS[p.name]=p.photo; });
+    
+    if(!PERSONS.length) throw new Error('无人');
     document.getElementById('setupPanel').classList.add('hidden');
     document.getElementById('practicePanel').classList.remove('hidden');
-    startPractice();
-  }catch(e){alert('加载人物信息失败：'+e.message);}
+    nextQ();
+  }catch(e){
+    document.getElementById('setupPanel').classList.remove('hidden');
+    alert('加载人物失败：'+e.message+'，请检查管理端配置');
+  }
 }
 
-// 开始练习
-function startPractice(){
-  score=0; total=0; sessionDetails=[];
-  document.getElementById('endPanel').classList.add('hidden');
-  document.getElementById('practicePanel').classList.remove('hidden');
-  document.getElementById('nextBtn').classList.add('hidden');
-  updateScore();
-  nextQuestion();
+function saveTokenAndLoad(){
+  setToken(document.getElementById('tokenInput').value.trim());
+  updateTokenStatus();
+  loadConfig();
 }
 
-// 随机出题
-function nextQuestion(){
+function nextQ(){
   if(total>=10){finishPractice(); return;}
+  // 随机选人（取name）
   const target=PERSONS[Math.floor(Math.random()*PERSONS.length)];
-  currentQ=target;
-  document.getElementById('photoImg').src=PHOTOS[target]||'';
+  currentQ=target.name;
+  const photoUrl=PHOTOS[target.name]||target.photo||'';
+  const box=document.getElementById('photoBox');
+  if(photoUrl){box.innerHTML=`<img src="${photoUrl}" onerror="this.onerror=null;this.parentNode.innerText='无图'">`;}
+  else{box.innerText='无图';}
+  
   document.getElementById('questionText').innerText='这是谁？';
   document.getElementById('resultText').innerText='';
   document.getElementById('nextBtn').classList.add('hidden');
 
-  // 生成选项（1正确+3干扰）
-  let opts=[target];
+  // 生成选项（1正确+干扰）
+  let opts=[target.name];
   while(opts.length<Math.min(4,PERSONS.length)){
-    const r=PERSONS[Math.floor(Math.random()*PERSONS.length)];
+    const r=PERSONS[Math.floor(Math.random()*PERSONS.length)].name;
     if(!opts.includes(r)) opts.push(r);
   }
   opts.sort(()=>Math.random()-0.5);
-  const box=document.getElementById('optionsBox');
-  box.innerHTML=opts.map(n=>`<button class="option-btn" onclick="answer('${n}')">${n}</button>`).join('');
+  document.getElementById('optionsBox').innerHTML=opts.map(n=>`<button class="btn btn-opt" onclick="answer('${n.replace(/'/g,"\\'")}')">${n}</button>`).join('');
   updateProgress();
 }
 
-// 答题
 function answer(ans){
   const correct=ans===currentQ;
   total++; if(correct) score++;
@@ -146,35 +132,33 @@ function answer(ans){
   updateScore(); updateProgress();
 }
 
-function updateScore(){document.getElementById('scoreText').innerText=`共 ${total} 题，正确 ${score} 题（${total?Math.round(score/total*100):0}%）`;}
+function updateScore(){document.getElementById('tokenStatus').innerText=`共${total}题 正确${score}题(${total?Math.round(score/total*100):0}%) | ${getToken()?'已设':'未设'}`;}
 function updateProgress(){document.getElementById('progressFill').style.width=(total/10 * 100)+'%';}
 
-// 结束并上传
 async function finishPractice(){
   document.getElementById('practicePanel').classList.add('hidden');
   document.getElementById('endPanel').classList.remove('hidden');
   const acc=total?Math.round(score/total*100):0;
-  document.getElementById('endResult').innerHTML=`本次共 <b>${total}</b> 题，正确 <b>${score}</b> 题，正确率 <b>${acc}%</b>`;
-  
+  let html=`本次共 <b>${total}</b> 题，正确 <b>${score}</b> 题，正确率 <b>${acc}%</b>`;
   const token=getToken();
-  if(!token){document.getElementById('endResult').innerHTML+='<br><span class="small">（未填Token，记录仅本机保留）</span>'; return;}
-  
-  const today=new Date().toISOString().slice(0,10);
-  const newRec={date:today, count:total, correct:score, total, details:sessionDetails};
-  try{
-    let sha=null, existing=[];
-    try{const d=await fetch(DATA_URL,{headers:{Authorization:'token '+token}}).then(r=>r.json()); if(d.content){existing=JSON.parse(safeAtob(d.content)); sha=d.sha;}}catch(e){}
-    existing.push(newRec);
-    const body={message:'practice session', content:safeBtoa(JSON.stringify(existing,null,2)), sha};
-    await fetch(DATA_URL,{method:'PUT', headers:{Authorization:'token '+token, 'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    document.getElementById('endResult').innerHTML+='<br><span class="success">✅ 记录已同步到管理端</span>';
-  }catch(e){document.getElementById('endResult').innerHTML+='<br><span class="danger">同步失败：'+e.message+'</span>';}
+  if(!token){html+='<br><span class="small">（未填Token，记录仅本机保留）</span>';}
+  else{
+    const today=new Date().toISOString().slice(0,10);
+    const newRec={date:today, count:total, correct:score, total, details:sessionDetails};
+    try{
+      let sha=null, existing=[];
+      const rd=await fetch(DATA_URL,{headers:{Authorization:'token '+token}}).then(r=>r.json());
+      if(rd.content){existing=JSON.parse(safeAtob(rd.content)); sha=rd.sha;}
+      existing.push(newRec);
+      await fetch(DATA_URL,{method:'PUT', headers:{Authorization:'token '+token, 'Content-Type':'application/json'}, body:JSON.stringify({message:'practice session', content:safeBtoa(JSON.stringify(existing,null,2)), sha})});
+      html+='<br><span class="success">✅ 记录已同步到管理端</span>';
+    }catch(e){html+='<br><span class="danger">同步失败：'+e.message+'</span>';}
+  }
+  document.getElementById('endResult').innerHTML=html;
 }
 
-// 初始化
-document.getElementById('tokenInput').value=getToken();
-if(getToken()||PERSONS.length){loadConfigAndStart();}
-else{document.getElementById('setupPanel').classList.remove('hidden');}
+updateTokenStatus();
+if(getToken()) loadConfig();
 </script>
 </body>
 </html>
