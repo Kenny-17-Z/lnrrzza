@@ -86,7 +86,7 @@
   .tab { display: inline-block; padding: 8px 16px; cursor: pointer; background: var(--light); color: var(--dark); border-radius: 4px 4px 0 0; margin-right: 4px; font-size: 14px; }
   .tab.active { background: var(--main); color: #fff; }
 
-  /* Card - 统一外盒，确保对齐 */
+  /* Card */
   .card {
     background: var(--card-bg);
     border-radius: 12px;
@@ -121,7 +121,7 @@
   .cal-days > div.active { background: var(--main); color: #fff; font-weight: bold; }
   .cal-days > div.empty { background: transparent; }
 
-  /* Trend canvas - 宽度100%对齐 */
+  /* Trend canvas */
   #trendCanvas {
     width: 100% !important;
     height: 200px;
@@ -337,7 +337,6 @@ async function gh(path,opts={}){
 async function loadConfig(){ try{ const d=await gh('config.json'); CONFIG=d.content?JSON.parse(atob(d.content)):{persons:[]}; }catch(e){CONFIG={persons:[]};} }
 async function saveConfig(){ const d=await gh('config.json'); await gh('config.json',{method:'PUT',body:JSON.stringify({message:'update config',content:btoa(JSON.stringify(CONFIG,null,2)),sha:d.sha})}); }
 async function loadData(){ try{ const d=await gh('data.json'); RECORDS=d.content?JSON.parse(atob(d.content)):[]; }catch(e){RECORDS=[];} }
-async function saveDataSafe(data,msg){ const d=await gh('data.json'); await gh('data.json',{method:'PUT',body:JSON.stringify({message:msg,content:btoa(JSON.stringify(data,null,2)),sha:d.sha})}); }
 
 // ================= 人物渲染 & 浮窗 =================
 function renderPersons(){
@@ -664,21 +663,29 @@ function renderRecords(){
   document.getElementById('records').innerHTML=sorted.map(r=>`<tr><td>${r.date.slice(5)}</td><td>${r.correct}</td><td>${r.total}</td><td>${Math.round(r.correct/r.total*100)}%</td></tr>`).join('');
 }
 
-// ================= 数据上传 =================
+// ================= 数据上传（修复版） =================
 function uploadData(){
   const input=document.getElementById('uploadFile');
   if(!input.files.length){ document.getElementById('uploadResult').innerHTML='<span class="error">请选择文件</span>'; return; }
   const reader=new FileReader();
   reader.onload=async()=>{
     try{
-      const data=JSON.parse(reader.result);
-      if(!Array.isArray(data)) throw new Error('Invalid format: data must be an array');
-      await saveDataSafe(data,'upload data (replace all)');
+      const text=reader.result;
+      const data=JSON.parse(text);
+      if(!Array.isArray(data)) throw new Error('JSON is not an array');
+      
+      let sha=null;
+      try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
+      
+      const body={message:'upload data (replace all)',content:btoa(JSON.stringify(data,null,2))};
+      if(sha) body.sha=sha;
+      await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
+      
       RECORDS=data;
       document.getElementById('uploadResult').innerHTML='<span class="success">✅ 上传成功，数据已替换</span>';
       renderAnalysis();
     }catch(e){
-      document.getElementById('uploadResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">解析失败，请确认文件格式正确</div></div>`;
+      document.getElementById('uploadResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">上传失败：${e.message.includes('JSON')?'文件不是有效JSON':'请确认Token已保存且有仓库权限'}</div></div>`;
     }
   };
   reader.readAsText(input.files[0]);
@@ -691,13 +698,20 @@ function mergeFiles(){
   reader.onload=async()=>{
     try{
       const newRec=JSON.parse(reader.result);
+      if(!Array.isArray(newRec)) throw new Error('JSON is not an array');
       const merged=mergeRec(RECORDS,newRec);
-      await saveDataSafe(merged,'merge files');
+      
+      let sha=null;
+      try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
+      const body={message:'merge files',content:btoa(JSON.stringify(merged,null,2))};
+      if(sha) body.sha=sha;
+      await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
+      
       RECORDS=merged;
       document.getElementById('mergeResult').innerHTML='<span class="success">✅ 合并完成</span>';
       renderAnalysis();
     }catch(e){
-      document.getElementById('mergeResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">合并失败，请检查 JSON 格式</div></div>`;
+      document.getElementById('mergeResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">合并失败：${e.message.includes('JSON')?'文件不是有效JSON':'请确认Token已保存且有仓库权限'}</div></div>`;
     }
   };
   reader.readAsText(input.files[0]);
@@ -706,16 +720,25 @@ function mergeFiles(){
 function mergePasted(){
   const text=document.getElementById('pasteArea').value.trim();
   if(!text){ document.getElementById('pasteResult').innerHTML='<span class="error">内容为空</span>'; return; }
-  try{
-    const newRec=JSON.parse(text);
-    const merged=mergeRec(RECORDS,newRec);
-    saveDataSafe(merged,'merge pasted');
-    RECORDS=merged;
-    document.getElementById('pasteResult').innerHTML='<span class="success">✅ 追加完成</span>';
-    renderAnalysis();
-  }catch(e){
-    document.getElementById('pasteResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">解析失败，请检查粘贴内容格式</div></div>`;
-  }
+  (async()=>{
+    try{
+      const newRec=JSON.parse(text);
+      if(!Array.isArray(newRec)) throw new Error('JSON is not an array');
+      const merged=mergeRec(RECORDS,newRec);
+      
+      let sha=null;
+      try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
+      const body={message:'merge pasted',content:btoa(JSON.stringify(merged,null,2))};
+      if(sha) body.sha=sha;
+      await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
+      
+      RECORDS=merged;
+      document.getElementById('pasteResult').innerHTML='<span class="success">✅ 追加完成</span>';
+      renderAnalysis();
+    }catch(e){
+      document.getElementById('pasteResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">追加失败：${e.message.includes('JSON')?'内容不是有效JSON':'请确认Token已保存且有仓库权限'}</div></div>`;
+    }
+  })();
 }
 
 function mergeRec(existing,incoming){
@@ -735,12 +758,16 @@ function mergeRec(existing,incoming){
 async function clearAllData(){
   if(!confirm('⚠️ 确定要清除全部练习数据吗？\n此操作不可恢复！')) return;
   try{
-    await saveDataSafe([],'clear all practice data');
+    let sha=null;
+    try{ const d=await gh('data.json'); if(d.sha) sha=d.sha; }catch(e){}
+    const body={message:'clear all practice data',content:btoa(JSON.stringify([],null,2))};
+    if(sha) body.sha=sha;
+    await gh('data.json',{method:'PUT',body:JSON.stringify(body)});
     RECORDS=[];
     document.getElementById('clearResult').innerHTML='<span class="success">✅ 已全部清除</span>';
     renderAnalysis();
   }catch(e){
-    document.getElementById('clearResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">清除失败，请重试</div></div>`;
+    document.getElementById('clearResult').innerHTML=`<div class="error"><div class="err-en">${e.message}</div><div class="err-zh">清除失败，请确认Token已保存且有仓库权限</div></div>`;
   }
 }
 
