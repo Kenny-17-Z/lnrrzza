@@ -1,3 +1,10 @@
 {
-  "family": []
+  "family": [],
+  "photos": [
+    {
+      "name": "红",
+      "url": "photos/红/hong.jpg",
+      "isCorrect": true
+    }
+  ]
 }
