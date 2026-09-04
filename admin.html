@@ -18,6 +18,7 @@
     --card-shadow: 0 2px 8px rgba(212,136,6,0.1);
   }
   * { box-sizing: border-box; }
+
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 0; }
 
   .top {
@@ -295,6 +296,7 @@
 
 <script>
 const REPO='Kenny-17-Z/lnrrzza';
+const PHOTO_DIR = '照片'; // ← 统一用中文文件夹名
 let TOKEN=localStorage.getItem('gh_token')||'';
 let CONFIG={persons:[]};
 let RECORDS=[];
@@ -405,54 +407,94 @@ function closeModal(){ document.getElementById('modalMask').style.display='none'
 
 // ================= 人物操作 =================
 async function renamePerson(idx){ const n=prompt('新名字'); if(!n) return; CONFIG.persons[idx].name=n; await saveConfig(); renderPersons(); openModal(idx); }
+
 async function deletePerson(idx){
   if(!confirm('确认删除该人物及所有照片？')) return;
   const p=CONFIG.persons[idx];
-  for(const ph of p.photos){ try{ const d=await gh(ph.replace(/^https:\/\/raw.githubusercontent.com\/[^\/]+\/[^\/]+\/main\//,'')); if(d.sha) await gh(ph.replace(/^https:\/\/raw.githubusercontent.com\/[^\/]+\/[^\/]+\/main\//,''),{method:'DELETE',body:JSON.stringify({message:'del photo',sha:d.sha})}); }catch(e){} }
+  for(const ph of p.photos){
+    try{
+      const filePath = ph.replace(/^https:\/\/raw.githubusercontent.com\/[^\/]+\/[^\/]+\/main\//,'');
+      const d=await gh(filePath);
+      if(d.sha) await gh(filePath,{method:'DELETE',body:JSON.stringify({message:'del photo',sha:d.sha})});
+    }catch(e){}
+  }
   CONFIG.persons.splice(idx,1); await saveConfig(); renderPersons(); closeModal();
 }
+
 async function setDefault(idx,j){ CONFIG.persons[idx].default=j; await saveConfig(); openModal(idx); renderPersons(); }
+
 async function delPhoto(idx,j){
   const p=CONFIG.persons[idx]; const ph=p.photos[j];
-  try{ const d=await gh(ph.replace(/^https:\/\/raw.githubusercontent.com\/[^\/]+\/[^\/]+\/main\//,'')); if(d.sha) await gh(ph.replace(/^https:\/\/raw.githubusercontent.com\/[^\/]+\/[^\/]+\/main\//,''),{method:'DELETE',body:JSON.stringify({message:'del photo',sha:d.sha})}); }catch(e){}
+  try{
+    const filePath = ph.replace(/^https:\/\/raw.githubusercontent.com\/[^\/]+\/[^\/]+\/main\//,'');
+    const d=await gh(filePath);
+    if(d.sha) await gh(filePath,{method:'DELETE',body:JSON.stringify({message:'del photo',sha:d.sha})});
+  }catch(e){}
   p.photos.splice(j,1); if(p.default>=j) p.default=Math.max(0,p.default-1); await saveConfig(); openModal(idx); renderPersons();
 }
+
+// ================= 上传照片（统一用 PHOTO_DIR） =================
+async function uploadPhotos(personName, files){
+  const urls = [];
+  for(const file of files){
+    // 用时间戳前缀避免同名冲突
+    const fname = Date.now()+'_'+file.name.replace(/[^\w\u4e00-\u9fa5.\-]/g,'_');
+    const path = `${PHOTO_DIR}/${personName}/${fname}`;
+    // 只取 dataURL 的 base64 部分，避免双重编码
+    const b64 = await new Promise((res,rej)=>{
+      const fr=new FileReader();
+      fr.onload=()=>{
+        const result = fr.result;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        res(base64);
+      };
+      fr.onerror=rej;
+      fr.readAsDataURL(file);
+    });
+    await gh(path,{method:'PUT',body:JSON.stringify({message:'add photo',content:b64})});
+    urls.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
+  }
+  return urls;
+}
+
 async function modalAppend(idx){
   const f=document.getElementById('modalAddFile').files; if(!f.length) return;
   const p=CONFIG.persons[idx];
-  for(const file of f){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(safeBtoa(fr.result));fr.readAsDataURL(file);});
-    const path=`photos/${p.name}/${file.name}`;
-    await gh(path,{method:'PUT',body:JSON.stringify({message:'add photo',content:b64})});
-    p.photos.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
+  try{
+    const urls = await uploadPhotos(p.name, f);
+    p.photos.push(...urls);
+    await saveConfig(); openModal(idx); renderPersons();
+  }catch(e){
+    alert('上传失败：'+e.message);
   }
-  await saveConfig(); openModal(idx); renderPersons();
 }
+
 async function appendPhotos(){
   const i=document.getElementById('addToPerson').value; if(i==='') return;
   const f=document.getElementById('addPhotos').files; if(!f.length) return;
   const p=CONFIG.persons[i];
-  for(const file of f){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(safeBtoa(fr.result));fr.readAsDataURL(file);});
-    const path=`photos/${p.name}/${file.name}`;
-    await gh(path,{method:'PUT',body:JSON.stringify({message:'add photo',content:b64})});
-    p.photos.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
+  try{
+    const urls = await uploadPhotos(p.name, f);
+    p.photos.push(...urls);
+    await saveConfig(); renderPersons();
+  }catch(e){
+    alert('上传失败：'+e.message);
   }
-  await saveConfig(); renderPersons();
 }
+
 async function addPerson(){
   const n=document.getElementById('newName').value.trim(); if(!n) return;
-  const f=document.getElementById('newPhotos').files; let photos=[];
-  for(const file of f){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(safeBtoa(fr.result));fr.readAsDataURL(file);});
-    const path=`photos/${n}/${file.name}`;
-    await gh(path,{method:'PUT',body:JSON.stringify({message:'new person photo',content:b64})});
-    photos.push(`https://raw.githubusercontent.com/${REPO}/main/${path}`);
+  const f=document.getElementById('newPhotos').files;
+  try{
+    let photos=[];
+    if(f.length) photos = await uploadPhotos(n, f);
+    CONFIG.persons.push({name:n,photos,default:0});
+    await saveConfig();
+    document.getElementById('addResult').innerHTML='<span class="success">✅ 已添加</span>';
+    renderPersons();
+  }catch(e){
+    alert('添加人物失败：'+e.message);
   }
-  CONFIG.persons.push({name:n,photos,default:0});
-  await saveConfig();
-  document.getElementById('addResult').innerHTML='<span class="success">✅ 已添加</span>';
-  renderPersons();
 }
 
 // ================= 数据分析 =================
