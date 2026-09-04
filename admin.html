@@ -2,552 +2,353 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>家属后台 - 数据管理</title>
+<title>管理端 - 记忆训练</title>
 <style>
-* { box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 0; background: #f5f5f5; color: #333; }
-.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
-h1 { text-align: center; color: #2196F3; margin-bottom: 20px; }
-
-/* Tabs */
-.tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
-.tab-btn { padding: 10px 20px; border: none; border-radius: 8px 8px 0 0; cursor: pointer; background: #e0e0e0; font-size: 15px; }
-.tab-btn.active { background: #2196F3; color: white; }
-.tab-content { display: none; background: white; padding: 20px; border-radius: 0 8px 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.tab-content.active { display: block; }
-
-/* Cards */
-.card { border: 1px solid #e0e0e0; padding: 15px; margin: 10px 0; border-radius: 8px; background: #fafafa; }
-.card h3 { margin-top: 0; color: #1976D2; }
-.card h4 { margin: 10px 0 5px; color: #555; }
-
-/* Buttons */
-.btn { padding: 8px 16px; margin: 5px 3px; cursor: pointer; border: none; border-radius: 5px; background: #2196F3; color: white; font-size: 14px; }
-.btn:hover { background: #1976D2; }
-.btn-success { background: #4CAF50; }
-.btn-success:hover { background: #388E3C; }
-.btn-warning { background: #FF9800; }
-.btn-warning:hover { background: #F57C00; }
-
-/* Inputs */
-input[type="text"], input[type="file"], select, textarea {
-  padding: 6px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
-}
-textarea { width: 100%; min-height: 80px; resize: vertical; }
-
-/* Status */
-.status { margin-top: 8px; font-size: 13px; padding: 5px 0; }
-.status.ok { color: #4CAF50; }
-.status.err { color: #f44336; }
-.status.info { color: #666; }
-
-/* Tables */
-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-th { background: #f0f0f0; }
-
-/* Progress bar */
-.progress-bar { height: 16px; background: #e0e0e0; border-radius: 8px; overflow: hidden; margin: 3px 0; }
-.progress-fill { height: 100%; background: #2196F3; border-radius: 8px; transition: width 0.3s; }
-.progress-fill.hot { background: #f44336; }
-
-/* Canvas */
-canvas { display: block; margin: 10px auto; max-width: 100%; }
-
-/* HR */
-hr.split { border: none; border-top: 1px solid #ddd; margin: 15px 0; }
-
-/* Token area */
-.token-area { background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-
-/* Add person row */
-.add-person-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
-.add-person-row input { width: 160px; }
-.add-person-row .hint { font-size: 12px; color: #999; }
+  body{font-family:system-ui;max-width:900px;margin:20px auto;padding:0 15px;background:#f5f5f5;color:#333}
+  h1{margin-bottom:10px}
+  .tabs{display:flex;border-bottom:2px solid #ddd;margin-bottom:20px}
+  .tab{padding:10px 20px;cursor:pointer;background:#eee;margin-right:5px;border-radius:5px 5px 0 0}
+  .tab.active{background:#4a90e2;color:#fff}
+  .panel{display:none;background:#fff;padding:20px;border-radius:0 5px 5px 5px;box-shadow:0 2px 5px rgba(0,0,0,0.05)}
+  .panel.active{display:block}
+  canvas{border:1px solid #ddd;background:#fff;width:100%;height:200px}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{border:1px solid #ddd;padding:8px;text-align:center}
+  th{background:#f0f0f0}
+  .bar{background:#eee;height:20px;border-radius:10px;overflow:hidden}
+  .bar-fill{background:#4a90e2;height:100%;color:#fff;font-size:12px;line-height:20px;text-align:center}
+  .success{color:green}.error{color:red}.empty{color:#999}
+  input,textarea,select,button{margin:5px 0;padding:8px;font-size:14px}
+  button{background:#4a90e2;color:#fff;border:none;border-radius:4px;cursor:pointer}
+  button:disabled{background:#aaa}
+  textarea{width:100%;min-height:80px}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>👥 家属后台 - 数据管理</h1>
 
-<!-- Token 配置 -->
-<div class="token-area">
-  <strong>🔑 GitHub Token 配置</strong>
-  <span style="font-size:12px;color:#666;">（仅需配置一次，保存在浏览器本地）</span><br>
-  <input type="text" id="ghToken" placeholder="输入 Personal Access Token" style="width:350px;">
-  <button class="btn" onclick="saveToken()">保存</button>
-  <span class="status info" id="tokenStatus"></span>
+<h1>管理端</h1>
+<div id="tokenArea">
+  Token: <input type="password" id="tokenInput" placeholder="ghp_..." style="width:200px">
+  <button onclick="saveToken()">保存</button>
+  <span id="tokenStatus"></span>
 </div>
 
-<!-- Tabs -->
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('analysis', this)">📊 数据分析</button>
-  <button class="tab-btn" onclick="switchTab('upload', this)">📂 数据上传</button>
-  <button class="tab-btn" onclick="switchTab('manage', this)">👥 人物管理</button>
+  <div class="tab active" onclick="showTab('analysis')">📊 数据分析</div>
+  <div class="tab" onclick="showTab('person')">👤 人物管理</div>
+  <div class="tab" onclick="showTab('upload')">📤 数据上传</div>
 </div>
 
-<!-- Tab 1: 数据分析 -->
-<div id="tab-analysis" class="tab-content active">
-  <div class="card">
-    <h3>📈 正确率趋势图（本周）</h3>
-    <canvas id="trendCanvas" width="700" height="300"></canvas>
-    <div id="trendEmpty" class="status info"></div>
-  </div>
-  <div class="card">
-    <h3>🌀 易混淆人物统计</h3>
-    <div id="confusionStats"></div>
-  </div>
-  <div class="card">
-    <h3>📋 详细记录</h3>
-    <table id="detailTable"><thead></thead><tbody></tbody></table>
-  </div>
+<!-- 数据分析 -->
+<div id="analysis" class="panel active">
+  <h3>趋势图（最近7天，同天多条取平均）</h3>
+  <canvas id="trendChart"></canvas>
+  <h3>易混淆人物</h3>
+  <div id="confusionStats"></div>
+  <h3>详细记录</h3>
+  <div id="recordTable"></div>
 </div>
 
-<!-- Tab 2: 数据上传 -->
-<div id="tab-upload" class="tab-content">
-  <div class="card">
-    <h3>📂 练习数据的导入与合并</h3>
-
-    <h4>方式一：选择多个 JSON 文件合并</h4>
-    <input type="file" id="multiFileInput" accept=".json" multiple>
-    <button class="btn" onclick="mergeMultiFiles()">合并选中文件</button>
-    <span class="status info" id="multiFileStatus"></span>
-
-    <hr class="split">
-
-    <h4>方式二：粘贴新代码，追加合并到当前数据</h4>
-    <p style="font-size:12px;color:#666;" id="pasteHint">当前内存中暂无数据</p>
-    <textarea id="pasteCode" placeholder="粘贴新的 data.json 内容或代码到这里..."></textarea>
-    <button class="btn btn-warning" onclick="mergePastedCode()">追加合并</button>
-    <span class="status info" id="pasteStatus"></span>
-  </div>
+<!-- 人物管理 -->
+<div id="person" class="panel">
+  <div id="status"></div>
+  <h3>当前人物列表</h3>
+  <div id="personList"></div>
+  <hr>
+  <h3>添加新人物（一步：名字 + 照片）</h3>
+  <input type="text" id="newName" placeholder="人物名字">
+  <input type="file" id="fileInput" multiple accept="image/*">
+  <button onclick="addPerson()">添加人物并上传</button>
+  <hr>
+  <h3>已有任务追加照片</h3>
+  <select id="personSelect"><option value="">--选人物--</option></select>
+  <input type="file" id="fileInput2" multiple accept="image/*">
+  <button onclick="appendPhotos()">上传选中照片</button>
 </div>
 
-<!-- Tab 3: 人物管理 -->
-<div id="tab-manage" class="tab-content">
-  <!-- 1. 当前人物列表 -->
-  <div class="card">
-    <h3>👥 当前人物列表</h3>
-    <div id="personList"><p class="status info">暂无数据，上传照片后自动生成</p></div>
-  </div>
-
-  <!-- 2. 人物上传 -->
-  <div class="card">
-    <h3>📷 人物上传</h3>
-    <p style="font-size:13px;color:#666;">
-      选择或添加人物 → 选图片（可多选）→ 自动传到 <code>photos/人名/xxx.jpg</code>，并同步更新仓库根目录 <code>config.json</code>。
-    </p>
-
-    <!-- 添加新人物 -->
-    <div class="add-person-row">
-      <input type="text" id="newPersonName" placeholder="输入新人物名字">
-      <button class="btn btn-success" onclick="addNewPerson()">➕ 添加新人物</button>
-      <span class="hint" id="addPersonHint"></span>
-    </div>
-
-    <hr class="split">
-
-    <!-- 选择人物 + 上传 -->
-    <select id="photoPerson">
-      <option value="红">红</option>
-      <option value="慧贤">慧贤</option>
-      <option value="欣">欣</option>
-      <option value="泉">泉</option>
-    </select>
-    <input type="file" id="photoFiles" accept="image/*" multiple>
-    <button class="btn btn-success" onclick="uploadSelectedPhotos()">上传选中照片</button>
-    <div id="photoUploadStatus" class="status"></div>
-  </div>
+<!-- 数据上传 -->
+<div id="upload" class="panel">
+  <h3>多文件合并</h3>
+  <input type="file" id="mergeFiles" accept=".json">
+  <button onclick="mergeFiles()">合并</button>
+  <div id="mergeResult"></div>
+  <hr>
+  <h3>粘贴追加合并</h3>
+  <textarea id="pasteArea" placeholder="粘贴 JSON 数组"></textarea>
+  <button onclick="mergePasted()">追加</button>
+  <div id="pasteResult"></div>
 </div>
-
-</div><!-- /container -->
 
 <script>
-// ================= 全局配置 =================
-const REPO_OWNER = 'Kenny-17-Z';
+const REPO_OWNER = 'kenny-17-z';
 const REPO_NAME  = 'lnrrzza';
 const BRANCH     = 'main';
-const DATA_FILE  = 'data.json';
 const CONFIG_FILE = 'config.json';
+const DATA_FILE  = 'data.json';
 
-let memoryData = [];
-let configData = null;
+let CURRENT_CONFIG = { persons: [] };
+let RECORDS = [];
 
-// ================= Tab 切换 =================
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'analysis') renderAnalysis();
+// Token
+function getToken(){ return localStorage.getItem('gh_token'); }
+function saveToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t){ alert('请输入 Token'); return; }
+  localStorage.setItem('gh_token', t);
+  document.getElementById('tokenStatus').innerHTML = '<span class="success">✅ 已保存</span>';
+}
+if(getToken()) document.getElementById('tokenStatus').innerHTML = '<span class="success">✅ Token 已加载</span>';
+
+// Tabs
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
+  document.getElementById(name).classList.add('active');
+  if(name==='analysis') renderAnalysis();
+  if(name==='person') renderPerson();
 }
 
-// ================= Token =================
-function saveToken() {
-  const v = document.getElementById('ghToken').value.trim();
-  if (!v) { alert('请输入 Token'); return; }
-  localStorage.setItem('ghToken', v);
-  const s = document.getElementById('tokenStatus');
-  s.innerText = '✅ 已保存';
-  s.className = 'status ok';
+// GitHub 基础
+async function ghFetch(path){
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`);
+  if(!r.ok) throw new Error('GET '+path+' '+r.status);
+  return r.json();
 }
-document.getElementById('ghToken').value = localStorage.getItem('ghToken') || '';
+function b64(s){ return btoa(unescape(encodeURIComponent(s))); }
+function ub64(s){ return decodeURIComponent(escape(atob(s))); }
 
-function getToken() {
-  const t = localStorage.getItem('ghToken');
-  if (!t) { alert('请先在上方填写并保存 GitHub Token'); return null; }
-  return t;
-}
-
-// ================= GitHub API =================
-async function ghGet(path) {
-  const token = getToken();
-  if (!token) return null;
-  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`, {
-    headers: { 'Authorization': `token ${token}` }
-  });
-  if (!res.ok) throw new Error(`GET ${path}: ${res.status}`);
-  return res.json();
-}
-
-async function ghPut(path, contentB64, sha, message) {
-  const token = getToken();
-  if (!token) return null;
-  const body = { message, content: contentB64, branch: BRANCH };
-  if (sha) body.sha = sha;
-  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
-    method: 'PUT',
-    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) { const j = await res.json(); throw new Error(`PUT ${path}: ${j.message}`); }
-  return res.json();
-}
-
-function textToBase64(text) { return btoa(unescape(encodeURIComponent(text))); }
-function base64ToText(b64) { return decodeURIComponent(escape(atob(b64))); }
-
-// ================= 添加新人物 =================
-function addNewPerson() {
-  const input = document.getElementById('newPersonName');
-  const hint = document.getElementById('addPersonHint');
-  const name = input.value.trim();
-  if (!name) { hint.innerText = '⚠️ 请输入名字'; hint.style.color = '#f44336'; return; }
-
-  const select = document.getElementById('photoPerson');
-  // 检查是否已存在
-  for (let i = 0; i < select.options.length; i++) {
-    if (select.options[i].value === name) {
-      hint.innerText = '⚠️ 该人物已存在';
-      hint.style.color = '#f44336';
-      select.selectedIndex = i;
-      return;
-    }
+// 配置归一化（兼容旧格式）
+function normalizeConfig(cfg){
+  if(!cfg) return { persons:[] };
+  if(Array.isArray(cfg.persons)) return cfg;
+  if(Array.isArray(cfg.photos)){
+    const map={};
+    cfg.photos.forEach(p=>{
+      if(!map[p.name]) map[p.name]={name:p.name,photos:[]};
+      map[p.name].photos.push(p.url);
+    });
+    return { persons: Object.values(map) };
   }
-  // 新增 option
-  const opt = document.createElement('option');
-  opt.value = name;
-  opt.text = name;
-  select.appendChild(opt);
-  select.value = name;
-  input.value = '';
-  hint.innerText = `✅ 已添加「${name}」`;
-  hint.style.color = '#4CAF50';
+  return { persons:[] };
 }
 
-// ================= 人物上传 =================
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-function sanitizeFileName(name) {
-  return name.replace(/\s+/g, '_').toLowerCase();
-}
-
-async function uploadSelectedPhotos() {
-  const token = getToken(); if (!token) return;
-  const person = document.getElementById('photoPerson').value;
-  const files = document.getElementById('photoFiles').files;
-  const status = document.getElementById('photoUploadStatus');
-  if (!files.length) { alert('请选择图片'); return; }
-
-  status.className = 'status info';
-  status.innerText = `准备上传 ${files.length} 张...`;
-
-  let uploadedPaths = [];
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    try {
-      const b64 = await fileToBase64(file);
-      const safeName = sanitizeFileName(file.name);
-      const path = `photos/${person}/${safeName}`;
-
-      let sha = null;
-      try { const ex = await ghGet(path); if (ex) sha = ex.sha; } catch(e) {}
-
-      await ghPut(path, b64, sha, `upload photo ${path}`);
-      uploadedPaths.push(path);
-      status.innerText = `已上传 ${i+1}/${files.length}: ${safeName}`;
-    } catch (e) {
-      status.className = 'status err';
-      status.innerText = `❌ 第${i+1}张失败: ${e.message}`;
-      return;
-    }
+async function loadConfig(){
+  try{
+    const f = await ghFetch(CONFIG_FILE);
+    CURRENT_CONFIG = normalizeConfig(JSON.parse(ub64(f.content)));
+  }catch(e){
+    CURRENT_CONFIG = { persons:[] };
   }
-
-  // 自动更新 config.json
-  try {
-    status.innerText = '照片已传，正在更新 config.json...';
-    await updateConfigWithPhotos(person, uploadedPaths);
-    status.className = 'status ok';
-    status.innerText = `✅ 完成！新增 ${uploadedPaths.length} 张，${person} 的照片已同步到 config.json`;
-    renderPersonList();
-  } catch (e) {
-    status.className = 'status err';
-    status.innerText = `⚠️ 照片已传但 config.json 更新失败: ${e.message}`;
-  }
+  renderPerson();
 }
 
-async function updateConfigWithPhotos(person, paths) {
-  let cfgFile, cfg;
-  try {
-    cfgFile = await ghGet(CONFIG_FILE);
-    cfg = JSON.parse(base64ToText(cfgFile.content));
-  } catch(e) {
-    cfg = { photos: [] };
-    cfgFile = { sha: null };
+async function saveConfigSafe(updater, msg){
+  for(let i=0;i<3;i++){
+    let f, sha=null;
+    try{ f=await ghFetch(CONFIG_FILE); sha=f.sha; }catch(e){}
+    const cfg = sha ? normalizeConfig(JSON.parse(ub64(f.content))) : { persons:[] };
+    updater(cfg);
+    const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${CONFIG_FILE}?ref=${BRANCH}`,{
+      method:'PUT',
+      headers:{'Authorization':`token ${getToken()}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({message:msg,content:b64(JSON.stringify(cfg,null,2)),sha:sha||undefined,branch:BRANCH})
+    });
+    if(r.ok){ CURRENT_CONFIG=cfg; renderPerson(); return; }
   }
-  if (!cfg.photos) cfg.photos = [];
-  paths.forEach(p => {
-    if (!cfg.photos.some(x => x.url === p)) {
-      cfg.photos.push({ name: person, url: p, isCorrect: true });
-    }
-  });
-  const newB64 = textToBase64(JSON.stringify(cfg, null, 2));
-  await ghPut(CONFIG_FILE, newB64, cfgFile.sha, `update config: add photos for ${person}`);
-  configData = cfg;
+  throw new Error('写入 config.json 失败（SHA冲突重试耗尽）');
 }
 
-// ================= 多文件合并 =================
-function mergeMultiFiles() {
-  const files = document.getElementById('multiFileInput').files;
-  const status = document.getElementById('multiFileStatus');
-  if (!files.length) { alert('请选择 JSON 文件'); return; }
-
-  let results = [];
-  let idx = 0;
-
-  function readNext() {
-    if (idx >= files.length) {
-      memoryData = mergeDataArrays(results);
-      status.className = 'status ok';
-      status.innerText = `✅ 已合并 ${files.length} 个文件，共 ${memoryData.length} 条记录`;
-      updatePasteHint();
-      return;
-    }
-    const r = new FileReader();
-    r.onload = e => {
-      try {
-        let d = JSON.parse(e.target.result);
-        if (!Array.isArray(d)) d = d.records || [];
-        results.push(d);
-      } catch(err) {
-        status.className = 'status err';
-        status.innerText = `❌ 文件 ${files[idx].name} 解析失败`;
-        return;
-      }
-      idx++;
-      readNext();
-    };
-    r.readAsText(files[idx]);
-  }
-  readNext();
-}
-
-// ================= 粘贴合并 =================
-function mergePastedCode() {
-  const status = document.getElementById('pasteStatus');
-  const text = document.getElementById('pasteCode').value.trim();
-  if (!text) { alert('请粘贴内容'); return; }
-
-  let newData;
-  try {
-    newData = JSON.parse(text);
-    if (!Array.isArray(newData)) newData = newData.records || [];
-  } catch(e) {
-    status.className = 'status err';
-    status.innerText = '❌ JSON 解析失败';
+// 人物渲染
+function renderPerson(){
+  const list = document.getElementById('personList');
+  const sel  = document.getElementById('personSelect');
+  if(!CURRENT_CONFIG.persons.length){
+    list.innerHTML='<p class="empty">暂无数据，上传照片后自动生成</p>';
+    sel.innerHTML='<option value="">--选人物--</option>';
     return;
   }
-
-  memoryData = mergeDataArrays([memoryData, newData]);
-  status.className = 'status ok';
-  status.innerText = `✅ 已追加合并，当前共 ${memoryData.length} 条记录`;
-  updatePasteHint();
+  list.innerHTML = CURRENT_CONFIG.persons.map(p=>`<div>👤 <b>${p.name}</b>（${p.photos?.length||0} 张）</div>`).join('');
+  sel.innerHTML = '<option value="">--选人物--</option>' + CURRENT_CONFIG.persons.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
 }
 
-function mergeDataArrays(arrays) {
-  let map = new Map();
-  arrays.flat().forEach(d => {
-    if (!d.date) return;
-    const key = d.date + '_' + (d.count || 1);
-    if (map.has(key)) {
-      const old = map.get(key);
-      const total = old.total + d.total;
-      const correct = old.correct + d.correct;
-      map.set(key, { ...old, total, correct, details: [...(old.details||[]), ...(d.details||[])] });
-    } else {
-      map.set(key, { ...d });
+// 添加人物
+async function addPerson(){
+  const btn=document.querySelector('#person button[onclick="addPerson()"]');
+  const status=document.getElementById('status');
+  const name=document.getElementById('newName').value.trim();
+  const files=document.getElementById('fileInput').files;
+  if(!name){status.innerHTML='<span class="error">请输入人物名字</span>';return;}
+  if(!files.length){status.innerHTML='<span class="error">请选照片</span>';return;}
+  if(!getToken()){status.innerHTML='<span class="error">请先填 Token</span>';return;}
+  btn.disabled=true; status.innerHTML='⏳ 上传中...';
+  try{
+    for(const f of files){
+      const path=`photos/${name}/${f.name}`;
+      const b64c=b64(unescape(encodeURIComponent(await f.text())));
+      let sha=null; try{sha=(await ghFetch(path)).sha;}catch(e){}
+      await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`,{
+        method:'PUT',headers:{'Authorization':`token ${getToken()}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+        body:JSON.stringify({message:`upload ${name}/${f.name}`,content:b64c,sha,branch:BRANCH})
+      });
     }
-  });
-  return Array.from(map.values()).sort((a,b) => a.date.localeCompare(b.date) || (a.count||1)-(b.count||1));
+    await saveConfigSafe(cfg=>{
+      let p=cfg.persons.find(x=>x.name===name);
+      if(!p){cfg.persons.push({name,photos:[]});p=cfg.persons.at(-1);}
+      for(const f of files){ const u=`photos/${name}/${f.name}`; if(!p.photos.includes(u)) p.photos.push(u); }
+    },`add ${name} +${files.length}`);
+    status.innerHTML='<span class="success">✅ 完成！</span>';
+    document.getElementById('newName').value=''; document.getElementById('fileInput').value='';
+    await loadConfig();
+  }catch(e){ status.innerHTML=`<span class="error">⚠️ ${e.message}</span>`; }
+  finally{ btn.disabled=false; }
 }
 
-function updatePasteHint() {
-  const el = document.getElementById('pasteHint');
-  if (memoryData.length > 0) {
-    const days = new Set(memoryData.map(d => d.date)).size;
-    el.innerText = `当前内存中已有 ${memoryData.length} 条记录（${days} 天）`;
-  } else {
-    el.innerText = '当前内存中暂无数据';
-  }
-}
-
-// ================= 人物列表渲染 =================
-function renderPersonList() {
-  const el = document.getElementById('personList');
-  if (!configData || !configData.photos) { el.innerHTML = '<p class="status info">暂无数据，上传照片后自动生成</p>'; return; }
-  const map = {};
-  configData.photos.forEach(p => {
-    if (!map[p.name]) map[p.name] = [];
-    map[p.name].push(p);
-  });
-  let html = '';
-  Object.keys(map).forEach(name => {
-    html += `<p><strong>${name}</strong>：${map[name].length} 张照片</p>`;
-  });
-  el.innerHTML = html;
+// 追加照片
+async function appendPhotos(){
+  const status=document.getElementById('status');
+  const person=document.getElementById('personSelect').value;
+  const files=document.getElementById('fileInput2').files;
+  if(!person||!files.length){status.innerHTML='<span class="error">请选人物和照片</span>';return;}
+  if(!getToken()){status.innerHTML='<span class="error">请先填 Token</span>';return;}
+  status.innerHTML='⏳ 上传中...';
+  try{
+    for(const f of files){
+      const path=`photos/${person}/${f.name}`;
+      const b64c=b64(unescape(encodeURIComponent(await f.text())));
+      let sha=null; try{sha=(await ghFetch(path)).sha;}catch(e){}
+      await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`,{
+        method:'PUT',headers:{'Authorization':`token ${getToken()}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+        body:JSON.stringify({message:`upload ${person}/${f.name}`,content:b64c,sha,branch:BRANCH})
+      });
+    }
+    await saveConfigSafe(cfg=>{
+      let p=cfg.persons.find(x=>x.name===person);
+      if(!p){cfg.persons.push({name:person,photos:[]});p=cfg.persons.at(-1);}
+      for(const f of files){ const u=`photos/${person}/${f.name}`; if(!p.photos.includes(u)) p.photos.push(u); }
+    },`append ${person} +${files.length}`);
+    status.innerHTML='<span class="success">✅ 照片已追加</span>';
+    document.getElementById('fileInput2').value='';
+    await loadConfig();
+  }catch(e){ status.innerHTML=`<span class="error">⚠️ ${e.message}</span>`; }
 }
 
 // ================= 数据分析 =================
-function renderAnalysis() {
-  renderTrend();
-  renderConfusion();
-  renderDetailTable();
+async function loadData(){
+  try{
+    const f = await ghFetch(DATA_FILE);
+    RECORDS = JSON.parse(ub64(f.content));
+  }catch(e){ RECORDS=[]; }
 }
 
-function renderTrend() {
-  const canvas = document.getElementById('trendCanvas');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.offsetWidth || 700;
-  const cssH = 300;
-  canvas.width = cssW * dpr;
-  canvas.height = cssH * dpr;
-  ctx.scale(dpr, dpr);
-  canvas.style.width = cssW + 'px';
-  canvas.style.height = cssH + 'px';
-  ctx.clearRect(0, 0, cssW, cssH);
+async function saveDataSafe(records, msg){
+  let sha=null;
+  try{ sha=(await ghFetch(DATA_FILE)).sha; }catch(e){}
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE}?ref=${BRANCH}`,{
+    method:'PUT',
+    headers:{'Authorization':`token ${getToken()}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+    body:JSON.stringify({message:msg,content:b64(JSON.stringify(records,null,2)),sha:sha||undefined,branch:BRANCH})
+  });
+  if(!r.ok) throw new Error('保存 data.json 失败');
+}
 
-  if (!memoryData.length) {
-    document.getElementById('trendEmpty').innerText = '暂无练习数据';
+function renderAnalysis(){
+  if(!RECORDS.length){
+    document.getElementById('trendChart').getContext('2d').clearRect(0,0,9999,9999);
+    document.getElementById('confusionStats').innerHTML='<p class="empty">暂无数据</p>';
+    document.getElementById('recordTable').innerHTML='<p class="empty">暂无记录</p>';
     return;
   }
-  document.getElementById('trendEmpty').innerText = '';
-
-  const dayMap = {};
-  memoryData.forEach(d => {
-    if (!dayMap[d.date]) dayMap[d.date] = { total: 0, correct: 0 };
-    dayMap[d.date].total += d.total;
-    dayMap[d.date].correct += d.correct;
+  // 按天聚合（同天多条取平均正确率）
+  const dayMap=new Map();
+  RECORDS.forEach(r=>{
+    const d=r.date.slice(5); // MM-DD
+    if(!dayMap.has(d)) dayMap.set(d,{date:d,total:0,correct:0,cnt:0});
+    const o=dayMap.get(d);
+    o.total+=r.total; o.correct+=r.correct; o.cnt++;
   });
-  const days = Object.keys(dayMap).sort();
-  const rates = days.map(d => dayMap[d].correct / dayMap[d].total * 100);
-
-  const padX = 40, padY = 30;
-  const plotW = cssW - padX * 2;
-  const plotH = cssH - padY * 2;
-
-  [100, 80, 50, 0].forEach(val => {
-    const y = padY + plotH - (val / 100) * plotH;
-    ctx.strokeStyle = val === 80 ? '#e0e0e0' : '#f0f0f0';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(padX, y);
-    ctx.lineTo(padX + plotW, y);
-    ctx.stroke();
-    ctx.fillStyle = '#999';
-    ctx.font = '11px sans-serif';
-    ctx.fillText(val + '%', 5, y + 4);
+  const days=Array.from(dayMap.values()).sort((a,b)=>a.date.localeCompare(b.date)).slice(-7);
+  const ctx=document.getElementById('trendChart').getContext('2d');
+  ctx.clearRect(0,0,900,200);
+  const w=900,h=200, pad=30;
+  const maxRate=100;
+  ctx.beginPath();
+  days.forEach((d,i)=>{
+    const x=pad+i*(w-pad*2)/(days.length-1||1);
+    const rate=Math.round(d.correct/d.total*100);
+    const y=h-pad-rate/(maxRate/100)*(h-pad*2);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    ctx.fillText(rate+'%',x-10,y-5);
+    ctx.fillText(d.date,x-15,h-10);
   });
+  ctx.stroke();
 
-  rates.forEach((rate, i) => {
-    const x = padX + (i / Math.max(rates.length - 1, 1)) * plotW;
-    const y = padY + plotH - (rate / 100) * plotH;
-    ctx.fillStyle = rate < 50 ? '#f44336' : rate < 80 ? '#FFC107' : '#4CAF50';
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#666';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(rate.toFixed(0) + '%', x, y - 8);
-    ctx.fillText(days[i].substring(5), x, padY + plotH + 15);
-  });
-}
-
-function renderConfusion() {
-  const el = document.getElementById('confusionStats');
-  if (!memoryData.length) { el.innerHTML = '<p class="status info">暂无数据</p>'; return; }
-
-  const confusionMap = {};
-  memoryData.forEach(d => {
-    if (!d.details) return;
-    d.details.forEach(dt => {
-      if (dt.correct === false || dt.correct === 0) {
-        const key = dt.name || '未知';
-        if (!confusionMap[key]) confusionMap[key] = {};
-        const sel = dt.selected || '未选';
-        confusionMap[key][sel] = (confusionMap[key][sel] || 0) + 1;
-      }
+  // 易混淆
+  const confusion={};
+  RECORDS.forEach(r=>{
+    (r.details||[]).forEach(d=>{
+      if(!d.correct&&d.expected) confusion[d.expected]=(confusion[d.expected]||0)+1;
     });
   });
+  const sorted=Object.entries(confusion).sort((a,b)=>b[1]-a[1]);
+  const max=sorted[0]?sorted[0][1]:1;
+  const ctn=document.getElementById('confusionStats');
+  ctn.innerHTML=sorted.length?sorted.map(([n,c])=>`<div><span style="display:inline-block;width:60px">${n}</span><div class="bar" style="display:inline-block;width:60%;vertical-align:middle"><div class="bar-fill" style="width:${c/max*100}%">${c}</div></div></div>`).join(''):'<p class="empty">暂无混淆</p>';
 
-  const sorted = Object.entries(confusionMap)
-    .map(([name, sels]) => ({ name, total: Object.values(sels).reduce((a,b)=>a+b,0), sels }))
-    .sort((a,b) => b.total - a.total)
-    .slice(0, 5);
+  // 表格
+  const tb=document.getElementById('recordTable');
+  tb.innerHTML=`<table><tr><th>日期</th><th>次数</th><th>总数</th><th>正确</th><th>正确率</th></tr>${[...RECORDS].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`<tr><td>${r.date}</td><td>${r.count}</td><td>${r.total}</td><td>${r.correct}</td><td>${Math.round(r.correct/r.total*100)}%</td></tr>`).join('')}</table>`;
+}
 
-  if (!sorted.length) { el.innerHTML = '<p>暂无答错记录 🎉</p>'; return; }
+// ================= 数据上传 =================
+function mergeFiles(){
+  const input=document.getElementById('mergeFiles');
+  if(!input.files.length) return;
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    try{
+      const newRec=JSON.parse(reader.result);
+      const merged=mergeRec(RECORDS,newRec);
+      await saveDataSafe(merged,'merge files');
+      RECORDS=merged;
+      document.getElementById('mergeResult').innerHTML=`<span class="success">✅ 合并完成，共 ${merged.length} 条</span>`;
+      renderAnalysis();
+    }catch(e){ document.getElementById('mergeResult').innerHTML=`<span class="error">⚠️ ${e.message}</span>`; }
+  };
+  reader.readAsText(input.files[0]);
+}
 
-  let html = '';
-  sorted.forEach(item => {
-    const pcts = Object.entries(item.sels).map(([sel, cnt]) => ({
-      sel, cnt, pct: (cnt / item.total * 100).toFixed(1)
-    })).sort((a,b) => b.cnt - a.cnt);
+function mergePasted(){
+  const text=document.getElementById('pasteArea').value.trim();
+  if(!text) return;
+  try{
+    const newRec=JSON.parse(text);
+    const merged=mergeRec(RECORDS,newRec);
+    saveDataSafe(merged,'merge pasted');
+    RECORDS=merged;
+    document.getElementById('pasteResult').innerHTML=`<span class="success">✅ 追加完成，共 ${merged.length} 条</span>`;
+    renderAnalysis();
+  }catch(e){ document.getElementById('pasteResult').innerHTML=`<span class="error">⚠️ ${e.message}</span>`; }
+}
 
-    html += `<div style="margin-bottom:12px;"><strong>${item.name}</strong> 被答错 ${item.total} 次<br>`;
-    pcts.forEach(p => {
-      html += `<div style="margin-left:15px;">认成 <strong>${p.sel}</strong> ${p.cnt}次 (${p.pct}%)`;
-      html += `<div class="progress-bar" style="width:200px;"><div class="progress-fill ${p.cnt > 2 ? 'hot' : ''}" style="width:${p.pct}%;"></div></div></div>`;
-    });
-    html += '</div>';
+function mergeRec(existing,incoming){
+  const map=new Map();
+  existing.forEach(r=>map.set(r.date+'_'+r.count,r));
+  incoming.forEach(r=>{
+    const key=r.date+'_'+r.count;
+    if(map.has(key)){
+      const old=map.get(key);
+      const total=old.total+r.total, correct=old.correct+r.correct;
+      map.set(key,{...old,total,correct,details:[...(old.details||[]),...(r.details||[])]});
+    }else map.set(key,r);
   });
-  el.innerHTML = html;
+  return Array.from(map.values());
 }
 
-function renderDetailTable() {
-  const thead = document.getElementById('detailTable').tHead;
-  const tbody = document.getElementById('detailTable').tBodies[0];
-  thead.innerHTML = '<tr><th>日期</th><th>次数</th><th>题数</th><th>正确</th><th>正确率</th></tr>';
-  tbody.innerHTML = memoryData.map(d =>
-    `<tr><td>${d.date}</td><td>${d.count||1}</td><td>${d.total}</td><td>${d.correct}</td><td>${(d.correct/d.total*100).toFixed(1)}%</td></tr>`
-  ).join('');
-}
+// 初始化
+showTab('analysis');
+loadConfig();
+loadData().then(renderAnalysis);
 </script>
 </body>
 </html>
