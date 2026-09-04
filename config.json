@@ -2,9 +2,7 @@
   "persons": [
     {
       "name": "红",
-      "photos": [
-        "https://raw.githubusercontent.com/Kenny-17-Z/lnrrzza/main/photos/红/hong.jpg"
-      ],
+      "photos": [],
       "default": 0
     },
     {
