@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "date": "2026-09-04",
+    "count": 5,
+    "correct": 5,
+    "total": 5,
+    "accuracy": 100,
+    "details": [
+      {
+        "expected": "慧贤",
+        "actual": "慧贤",
+        "correct": true,
+        "at": "2026-09-04T09:29:39.988Z"
+      },
+      {
+        "expected": "慧贤",
+        "actual": "慧贤",
+        "correct": true,
+        "at": "2026-09-04T09:29:46.694Z"
+      },
+      {
+        "expected": "慧贤",
+        "actual": "慧贤",
+        "correct": true,
+        "at": "2026-09-04T09:29:51.777Z"
+      },
+      {
+        "expected": "慧贤",
+        "actual": "慧贤",
+        "correct": true,
+        "at": "2026-09-04T09:29:56.410Z"
+      },
+      {
+        "expected": "欣",
+        "actual": "欣",
+        "correct": true,
+        "at": "2026-09-04T09:30:41.641Z"
+      }
+    ]
+  }
+]
