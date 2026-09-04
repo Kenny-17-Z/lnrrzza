@@ -568,15 +568,15 @@ function drawTrend(){
   }
 }
 
-// ================= 通用画图函数（已整合：Y轴左对齐 + X轴居中对齐） =================
+// ================= 通用画图函数（Y轴左对齐 + X轴居中对齐 + 顶部留白充足） =================
 function drawLineChart(canvas,points,chartHeight){
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
-  const padL=45, padR=20, padT=15, padB=25;
-  const padX=15; // 首尾留白
+  const padL=45, padR=20, padT=22, padB=22;
+  const padX=15;
   const plotW=w-padL-padR, plotH=h-padT-padB;
 
-  // Y轴参考线 + 标签（左对齐）
+  // Y轴参考线 + 左对齐标签
   ctx.strokeStyle='#eee'; ctx.lineWidth=1;
   ctx.fillStyle='#999'; ctx.font='10px sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='middle';
@@ -602,7 +602,7 @@ function drawLineChart(canvas,points,chartHeight){
   });
   ctx.strokeStyle='#d48806'; ctx.lineWidth=2.5; ctx.stroke();
 
-  // 圆点 + 数值 + X轴标签（标签与圆点同X，严格居中）
+  // 圆点 + 数值 + X轴标签
   points.forEach((p,i)=>{
     const x=padL+padX+i*stepX;
     if(p.acc!==null){
