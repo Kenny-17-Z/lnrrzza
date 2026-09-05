@@ -568,11 +568,11 @@ function drawTrend(){
   }
 }
 
-// ================= 通用画图函数（Y轴左对齐 + X轴居中对齐 + 顶部留白充足） =================
+// ================= 通用画图函数（实线/虚线分段 + 顶部留白充足） =================
 function drawLineChart(canvas,points,chartHeight){
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
-  const padL=45, padR=20, padT=22, padB=22;
+  const padL=45, padR=20, padT=28, padB=25;
   const padX=15;
   const plotW=w-padL-padR, plotH=h-padT-padB;
 
@@ -593,14 +593,48 @@ function drawLineChart(canvas,points,chartHeight){
   const innerW=plotW-2*padX;
   const stepX=len===1?0:innerW/(len-1);
 
-  // 折线
-  ctx.beginPath();
-  validPoints.forEach((p,i)=>{
+  // 计算每个点的x、y坐标
+  const coords=points.map((p,i)=>{
     const x=padL+padX+i*stepX;
+    if(p.acc===null) return { x, y:null, acc:null };
     const y=padT+(1-p.acc)*plotH;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    return { x, y, acc:p.acc };
   });
-  ctx.strokeStyle='#d48806'; ctx.lineWidth=2.5; ctx.stroke();
+
+  // 分段画线：连续有数据的点用实线，跨null区间用虚线
+  let i=0;
+  while(i<coords.length){
+    if(coords[i].acc===null){ i++; continue; }
+    // 找到连续有数据的起点
+    const startIdx=i;
+    while(i<coords.length && coords[i].acc!==null) i++;
+    const endIdx=i-1;
+
+    // 实线：连接这段连续有数据的点
+    ctx.beginPath();
+    for(let j=startIdx;j<=endIdx;j++){
+      if(j===startIdx) ctx.moveTo(coords[j].x,coords[j].y);
+      else ctx.lineTo(coords[j].x,coords[j].y);
+    }
+    ctx.strokeStyle='#d48806'; ctx.lineWidth=2.5;
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    // 虚线：如果后面还有数据，画一条虚线到下一个有数据的点
+    if(i<coords.length){
+      let nextIdx=i;
+      while(nextIdx<coords.length && coords[nextIdx].acc===null) nextIdx++;
+      if(nextIdx<coords.length){
+        ctx.beginPath();
+        ctx.moveTo(coords[endIdx].x,coords[endIdx].y);
+        ctx.lineTo(coords[nextIdx].x,coords[nextIdx].y);
+        ctx.strokeStyle='#d48806'; ctx.lineWidth=2.5;
+        ctx.setLineDash([6,4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+  }
 
   // 圆点 + 数值 + X轴标签
   points.forEach((p,i)=>{
@@ -609,10 +643,12 @@ function drawLineChart(canvas,points,chartHeight){
       const y=padT+(1-p.acc)*plotH;
       ctx.fillStyle=p.acc>=0.8?'#4CAF50':p.acc>=0.5?'#FFC107':'#f44336';
       ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+      // 百分比文字
       ctx.fillStyle='#666'; ctx.font='10px sans-serif';
       ctx.textAlign='center'; ctx.textBaseline='bottom';
-      ctx.fillText(Math.round(p.acc*100)+'%',x,p.acc>=0.99?y-12:y-8);
+      ctx.fillText(Math.round(p.acc*100)+'%',x,y-14);
     }
+    // X轴日期标签
     ctx.fillStyle='#999'; ctx.font='11px sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText(p.label||'',x,padT+plotH+5);
